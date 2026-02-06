@@ -6,9 +6,9 @@ import {
 } from "./routes"
 import { AuthProvider, ProtectedRoute } from "./context/Auth"
 
-console.log("App is running...")
-
 export default function App() {
+  console.log("App is running...")
+
   return (
     <AuthProvider>
       <BrowserRouter>
