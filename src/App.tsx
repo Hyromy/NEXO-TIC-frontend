@@ -6,6 +6,8 @@ import {
 } from "./routes"
 import { AuthProvider, ProtectedRoute } from "./context/Auth"
 
+console.log("App is running...")
+
 export default function App() {
   return (
     <AuthProvider>
