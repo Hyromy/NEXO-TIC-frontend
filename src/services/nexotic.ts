@@ -41,8 +41,11 @@ export const authService = {
     })
   ),
 
-  recover: () => (
-    null
+  recover: (username: string, email: string) => (
+    api.post(authService.endpoint + "recover/", {
+      username,
+      email,
+    })
   ),
 
   logout: (refresh: string) => (
