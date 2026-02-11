@@ -1,4 +1,4 @@
-export default function Administración_General(){
+export default function Administración(){
   return (
     <div>
       <h1>Administración General</h1>

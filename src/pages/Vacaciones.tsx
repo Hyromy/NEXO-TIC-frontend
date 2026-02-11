@@ -1,10 +1,7 @@
-   
-
-    export default function Vacacionenes(){
-        return (
-            <div>
-                <h1>Pantalla de Vaciones</h1>
-            </div>
-        )
-
-    }
+export default function Vacaciones(){
+    return (
+    <div>
+        <h1>Pantalla de Vacaciones</h1>
+    </div>
+    )
+}

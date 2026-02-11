@@ -1,8 +1,8 @@
 
-    export default function Incidencias_RH(){
+    export default function Incidencias:RH(){
         return (
             <div>
-                <h1>Incidencias por RH</h1>
+                <h1>Incidencias</h1>
             </div>
         )
 
