@@ -8,8 +8,8 @@ import AvisosRH from "./pages/Avisos_RH"
 import GestionEmpleados from "./pages/Gestión_Empleados"
 import Incidencias from "./pages/Incidencias"
 import Reportes from "./pages/Reportes"
-import Aprobaciones from "./pages/Aprobaciones"
 import Solicitudes from "./pages/Solicitudes"
+import Aprobaciones from "./pages/Aprobaciones"
 
 /**
  * Define application routes
