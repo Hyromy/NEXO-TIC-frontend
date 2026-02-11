@@ -10,6 +10,7 @@ import Incidencias from "./pages/Incidencias"
 import Reportes from "./pages/Reportes"
 import Solicitudes from "./pages/Solicitudes"
 import Aprobaciones from "./pages/Aprobaciones"
+import Vacaciones from "./pages/Vacaciones"
 
 /**
  * Define application routes
@@ -32,7 +33,7 @@ export const publicRoutes: appRoute[] = [
 
 export const protectedRoutes: appRoute[] = [
   { path: "/dashboard", element: <Dashboard /> },
-  { path: "/vacaciones", element: <Vacacionenes/>},
+  { path: "/vacaciones", element: <Vacaciones/>},
   { path: "/administracion", element: <AdministracionGeneral /> },
   { path: "/gestion-empleados", element: <GestionEmpleados /> },
   { path: "/aprobaciones", element: <Aprobaciones/> },
