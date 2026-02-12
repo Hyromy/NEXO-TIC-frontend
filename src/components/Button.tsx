@@ -2,18 +2,26 @@ import { type ReactNode } from "react"
 
 import { type variants } from "./variants"
 
+type buttonTypes = "button" | "submit" | "reset"
+
 type ButtonProps = {
   children: ReactNode
+  type?: buttonTypes
   variant?: variants
+  fat?: boolean
+  isLoading?: boolean
   onClick?: () => void
 }
 export function Button({
   children,
+  type = "button",
   variant = "primary",
-  onClick
+  fat,
+  isLoading,
+  onClick,
 }: ButtonProps) {
   return (
-    <button type="button" className={"btn btn-" + variant} onClick={onClick}>
+    <button type={type} className={"btn btn-" + variant + (fat ? " w-100" : "") + (isLoading ? " disabled" : "")} onClick={onClick}>
       {children}
     </button>
   )

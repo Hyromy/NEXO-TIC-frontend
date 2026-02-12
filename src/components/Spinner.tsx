@@ -12,8 +12,10 @@ export function Spinner({
   growing = false,
   small = false
 }: SpinnerProps) {
+  const spinnerType = growing ? "grow" : "border"
+
   return (
-    <div className={`spinner-${growing ? "grow" : "border"} ${variant ? `text-${variant}` : ""} ${small ? "spinner-sm" : ""}`} role="status">
+    <div className={`spinner-${spinnerType} ${variant ? `text-${variant}` : ""} ${small ? `spinner-${spinnerType}-sm` : ""}`} role="status">
       <span className="visually-hidden">
         {label}
       </span>

@@ -35,10 +35,10 @@ export default function Navbar() {
   }
 
   const dropdownItems = [
-    <Button variant="secondary" onClick={changePasswordHandler}>
+    <Button variant="secondary" onClick={changePasswordHandler} fat>
       Cambiar contraseña
     </Button>,
-    <Button variant="danger" onClick={logoutHandler}>
+    <Button variant="danger" onClick={logoutHandler} fat>
       Cerrar sesión 
     </Button>
   ]

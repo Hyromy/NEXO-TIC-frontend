@@ -1,9 +1,9 @@
 import { useEffect } from "react"
 
-import { userService } from "../services/nexotic"
-import useApi from "../hooks/useApi"
+import { userService } from "../../services/nexotic"
+import useApi from "../../hooks/useApi"
 
-import Main from "../layout/Main"
+import Main from "../../layout/Main"
 
 export default function Dashboard() {
   const { execute, data, error, loading } = useApi<any>()
@@ -16,15 +16,8 @@ export default function Dashboard() {
   console.log("Dashboard error:", error)
   console.log("Dashboard loading:", loading)
 
-  const menuModules = [
-    "Inicio",
-    "Perfil",
-    "Configuración",
-    "Reportes",
-  ]
-
   return (
-    <Main menuModules={menuModules}>
+    <Main>
       <h1>Dashboard</h1>
       <p>Welcome to your dashboard!</p>
     </Main>

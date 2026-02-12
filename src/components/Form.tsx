@@ -39,7 +39,7 @@ const textFieldTextContent = (text: string, id: string) => {
 
 type FormProps = {
   children: ReactNode
-  onSubmit: (data: object) => void
+  onSubmit: (data: any) => void
 }
 export function Form({
   children,
