@@ -1,5 +1,5 @@
 const getCommonHeaders = () => {
-  const token = localStorage.getItem('authToken')
+  const token = localStorage.getItem('accessToken')
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
