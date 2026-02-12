@@ -2,28 +2,36 @@ import React, { type ReactNode } from "react"
 
 import { type variants } from "./variants"
 
+type directions = "up" | "start" | "end"
+
 type DropdownProps = {
   variant?: variants
   children: ReactNode
   items: ReactNode[]
+  direction?: directions
+  inverted?: boolean
 }
 export function Dropdown({
   variant = "primary",
   children,
-  items
+  items,
+  direction,
+  inverted,
 }: DropdownProps) {
   return (
-    <div className="dropdown">
+    <div className={`dropdown ${direction ? `drop${direction}` : ''}`}>
       <button className={"btn btn-" + variant + " dropdown-toggle"} type="button" data-bs-toggle="dropdown" aria-expanded="false">
         {children}
       </button>
-      <ul className="dropdown-menu">
+      <ul className={`dropdown-menu ${inverted ? "dropdown-menu-end" : ""}`}>
         {items.map((item, index) => (
           React.isValidElement(item) && item.type == DropdownDivider
             ? <DropdownDivider key={index} />
             : (
-              <li key={index} className="dropdown-item">
-                {item}
+              <li key={index}>
+                <a className="dropdown-item">
+                  {item}
+                </a>
               </li>
             )
         ))}

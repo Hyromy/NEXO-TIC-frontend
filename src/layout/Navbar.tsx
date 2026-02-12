@@ -1,36 +1,67 @@
+import { type ReactNode } from "react"
+
+import { useAuth } from "../context/Auth"
+
+import { Dropdown } from "../components/Dropdown"
+import { Button } from "../components/Button"
+
+type NavbarGroupProps = {
+  children?: ReactNode
+  gap?: number
+}
+function NavbarGroup({
+  children,
+  gap = 2
+}: NavbarGroupProps) {
+  return (
+    <div className={`navbar-group d-flex align-items-center gap-${gap}`}>
+      {children}
+    </div>
+  )
+}
+
 export default function Navbar() {
-  const id = "mainNavbar"
+  const { logout } = useAuth()
+
+  const changePasswordHandler = () => {
+    alert("Cambiar contraseña")
+  }
+
+  const logoutHandler = () => {
+    const confirmation = confirm("¿Estás seguro que quieres cerrar sesión?")
+    if (confirmation) {
+      logout()
+    }
+  }
+
+  const dropdownItems = [
+    <Button variant="secondary" onClick={changePasswordHandler}>
+      Cambiar contraseña
+    </Button>,
+    <Button variant="danger" onClick={logoutHandler}>
+      Cerrar sesión 
+    </Button>
+  ]
 
   return (
-    <nav className="navbar navbar-expand-lg bg-body-tertiary">
-      <div className="container-fluid">
-        <a className="navbar-brand" href="#">
-          Navbar
-        </a>
-        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target={`#${id}`} aria-controls={id} aria-expanded="false" aria-label="Toggle navigation">
-          <span className="navbar-toggler-icon"></span>
+    <nav className="navbar bg-body-tertiary navbar-expand-sm px-0 sticky-top">
+      <div className="container-xxl d-flex justify-content-between align-items-center">
+        <button
+          className="btn d-md-none mx-2 p-0"
+          type="button"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#menuCanvas"
+          aria-controls="menuCanvas"
+        >
+          <i className="bi bi-list fs-3"></i>
         </button>
-        <div className="collapse navbar-collapse" id={id}>
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item">
-              <a className="nav-link active" aria-current="page" href="#">
-                Home
-              </a>
-            </li>
-            <li className="nav-item">
-              <a className="nav-link" href="#">
-                Link
-              </a>
-            </li>
-            <li className="nav-item">
-              <a className="nav-link disabled" aria-disabled="true">Disabled</a>
-            </li>
-          </ul>
-          <form className="d-flex" role="search">
-            <input className="form-control me-2" type="search" placeholder="Search" aria-label="Search"/>
-            <button className="btn btn-outline-success" type="submit">Search</button>
-          </form>
-        </div>
+        <NavbarGroup />
+        <NavbarGroup>
+          <Dropdown items={dropdownItems} variant="light" inverted>
+            <i className="bi bi-person-circle me-2"></i>
+            Hola usuario
+          </Dropdown>
+        </NavbarGroup>
       </div>
     </nav>
   )

@@ -1,15 +1,11 @@
 import { useEffect } from "react"
 
-import Menu from "../layout/Menu"
-import Foot from "../layout/Foot"
-import Navbar from "../layout/Navbar"
-
-import { useAuth } from "../context/Auth"
 import { userService } from "../services/nexotic"
 import useApi from "../hooks/useApi"
 
+import Main from "../layout/Main"
+
 export default function Dashboard() {
-  const { logout } = useAuth()
   const { execute, data, error, loading } = useApi<any>()
 
   useEffect(() => {
@@ -20,15 +16,17 @@ export default function Dashboard() {
   console.log("Dashboard error:", error)
   console.log("Dashboard loading:", loading)
 
-  return <>
-    <Navbar />
-    <Menu modules={[
-      <span onClick={logout} className="text-primary text-decoration-underline">Cerrar sesion</span>
-    ]}/>
-    <main className="container mt-5">
+  const menuModules = [
+    "Inicio",
+    "Perfil",
+    "Configuración",
+    "Reportes",
+  ]
+
+  return (
+    <Main menuModules={menuModules}>
       <h1>Dashboard</h1>
       <p>Welcome to your dashboard!</p>
-    </main>
-    <Foot />
-  </>
+    </Main>
+  )
 }
