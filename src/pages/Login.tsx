@@ -72,6 +72,8 @@ export default function Login() {
         </form>
         <div className="mt-3 text-center">
           <small>¿No tienes cuenta? <a href="/signup">Regístrate aquí</a></small>
+          <br />
+          <small>¿Olvidaste tu contraseña? <a href="/recovery">Recupérala aquí</a></small>
         </div>
       </section>
     </main>

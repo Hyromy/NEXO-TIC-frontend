@@ -1,5 +1,6 @@
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
+import Recovery from "./pages/Recovery"
 import Dashboard from "./pages/Dashboard"
 import { type JSX } from "react"
 import AdministracionGeneral from "./pages/Administracion_General"
@@ -27,7 +28,7 @@ export type appRoute = {
 export const publicRoutes: appRoute[] = [
   { path: "/", element: <Login /> },
   { path: "/signup", element: <Signup /> },
- 
+  { path: "/recovery", element: <Recovery /> },
 ]
 
 export const protectedRoutes: appRoute[] = [
