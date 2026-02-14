@@ -11,7 +11,7 @@ export function Canvas({
   children
 }: CanvasProps) {
   return (
-    <div className="offcanvas offcanvas-start show" tabIndex={-1} id={id} aria-labelledby={`${id}Label`}>
+    <div className="offcanvas offcanvas-start" tabIndex={-1} id={id} aria-labelledby={`${id}Label`}>
       <div className="offcanvas-header">
         <h5 className="offcanvas-title" id={`${id}Label`}>
           {title}

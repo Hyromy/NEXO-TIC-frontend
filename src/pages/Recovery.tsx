@@ -1,13 +1,26 @@
 import {
-  type SubmitEvent,
+  useState,
   useEffect,
 } from "react"
 
 import { isEmail } from "../utils/validator"
-import { getDataFromForm } from "../utils/getters"
+
+import { Form, TextField } from "../components/Form"
+import { Button } from "../components/Button"
+import { Spinner } from "../components/Spinner"
+import { Card } from "../components/Card"
+
+import { StackContainer } from "../layout/Containers"
 
 import useApi from "../hooks/useApi"
 import { authService } from "../services/nexotic"
+
+import { rawRoutes } from "../routes"
+
+type expectedData = {
+  username: string,
+  email: string,
+}
 
 const validate = (data: {
   username: string,
@@ -29,6 +42,8 @@ const validate = (data: {
 export default function Recovery() {
   const { data, error, execute } = useApi<any>()
 
+  const [loading, setLoading] = useState(false)
+
   useEffect(() => {
     if (data && data.ok) {
       alert("Si el usuario y correo electrónico son correctos, recibirás un correo con instrucciones para recuperar tu contraseña.")
@@ -39,45 +54,43 @@ export default function Recovery() {
     }
   }, [data, error])
 
-  const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const fd = getDataFromForm(new FormData(e.currentTarget)) as {
-      username: string,
-      email: string,
-    }
-    const validationMessage = validate(fd)
+  const handleSubmit = (data: expectedData) => {
+    const validationMessage = validate(data)
     if (validationMessage != "ok") {
       alert("Error de validación: " + validationMessage)
       return
     }
 
+    setLoading(true)
     execute(authService.recover(
-      fd.username,
-      fd.email,
-    ))
+      data.username,
+      data.email,
+    
+    )).finally(
+      () => setLoading(false)
+    )
   }
 
   return (
     <main className="d-flex justify-content-center align-items-center vh-100">
-      <section className="card p-4 shadow" style={{width: "22rem"}}>
+      <Card shadow>
         <h3 className="text-center mb-4">Recuperar Contraseña</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label htmlFor="username" className="form-label">Usuario</label>
-            <input type="text" className="form-control" name="username" id="username" required autoFocus />
-          </div>
-          <div className="mb-3">
-            <label htmlFor="email" className="form-label">Correo Electrónico</label>
-            <input type="email" className="form-control" name="email" />
-          </div>
-          <button type="submit" className="btn btn-primary w-100">Enviar</button>
-        </form>
-        <div className="mt-3 text-center">
-          <small>¿No tienes cuenta? <a href="/signup">Regístrate aquí</a></small>
-          <br />
-          <small>¿Ya tienes cuenta? <a href="/">Inicia Sesión</a></small>
-        </div>
-      </section>
+        <Form onSubmit={handleSubmit}>
+          <StackContainer>
+            <TextField name="username" label="Usuario" />
+            <TextField name="email" label="Correo Electrónico" />
+            <div className="my-3">
+              <Button type="submit" fat isLoading={loading}>
+                { loading ? <Spinner small /> : "Enviar" }
+              </Button>
+            </div>
+          </StackContainer>
+        </Form>
+        <StackContainer center>
+          <small>¿Ya tienes cuenta? <a href={rawRoutes.index.login}>Inicia Sesión</a></small>
+          <small>¿No tienes cuenta? <a href={rawRoutes.index.signup}>Regístrate aquí</a></small>
+        </StackContainer>
+      </Card>
     </main>
   )
 }

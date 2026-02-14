@@ -1,11 +1,26 @@
 import {
-  type SubmitEvent,
-  useEffect
+  useEffect,
+  useState,
 } from "react"
 
 import useApi from "../hooks/useApi"
 import { authService } from "../services/nexotic"
-import { getDataFromForm } from "../utils/getters"
+
+import { rawRoutes } from "../routes"
+
+import { Form, TextField, GroupField, GroupFieldText } from "../components/Form"
+import { Button } from "../components/Button"
+import { Spinner } from "../components/Spinner"
+import { Card } from "../components/Card"
+
+import { StackContainer } from "../layout/Containers"
+
+import { isEmail } from "../utils/validator"
+
+type expectedData = {
+  username: string,
+  email: string,
+}
 
 const validate = (data: {
   username: string,
@@ -15,6 +30,10 @@ const validate = (data: {
 
   if (!username || !email) {
     return "Todos los campos son obligatorios."
+  }
+
+  if (!isEmail(email)) {
+    return "El correo electrónico no es válido."
   }
 
   return "ok"
@@ -27,6 +46,8 @@ const userCreated = () => {
 export default function Signup() {
   const { data, error, execute } = useApi<any>()
 
+  const [loading, setLoading] = useState(false)
+
   useEffect(() => {
     if (data && data.ok) {
       userCreated()
@@ -36,45 +57,47 @@ export default function Signup() {
     }
   }, [data, error])
 
-  const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const fd = getDataFromForm(new FormData(e.currentTarget)) as {
-      username: string,
-      email: string,
-    }
-    const validationError = validate(fd)
+  const handleSubmit = (data: expectedData) => {
+    data.email = data.email + "@nexotic.com"
+    const validationError = validate(data)
     if (validationError != "ok") {
       alert("Error de validación: " + validationError)
       return
     }
 
+    setLoading(true)
     execute(authService.signup(
-      fd.username,
-      fd.email,
-    ))
+      data.username,
+      data.email,
+    
+    )).finally(
+      () => setLoading(false)
+    )
   }
 
   return (
     <main className="d-flex justify-content-center align-items-center vh-100">
-      <section className="card p-4 shadow" style={{width: "25rem"}}>
+      <Card shadow>
         <h3 className="text-center mb-4">Crear Cuenta</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label htmlFor="username" className="form-label">Usuario</label>
-            <input type="text" className="form-control" name="username" />
-          </div>
-          <div className="mb-3">
-            <label htmlFor="email" className="form-label">Correo Electrónico</label>
-            <input type="email" className="form-control" name="email" />
-          </div>
-          <button type="submit" className="btn btn-success w-100">Registrarse</button>
-        </form>
-        <div className="mt-3 text-center">
-          <small>¿Ya tienes cuenta? <a href="/">Inicia Sesión</a></small>
-          <br />
-          <small>¿Olvidaste tu contraseña? <a href="/recovery">Recupérala aquí</a></small>
-        </div>
-      </section>
+        <Form onSubmit={handleSubmit}>
+          <StackContainer>
+            <TextField name="username" label="Usuario" />
+            <GroupField label="Correo Electrónico">
+              <TextField name="email" />
+              <GroupFieldText text="@nexotic.com" />
+            </GroupField>
+            <div className="my-3">
+              <Button type="submit" variant="success" fat isLoading={loading}>
+                { loading ? <Spinner small /> : "Registrarse" }
+              </Button>
+            </div>
+          </StackContainer>
+        </Form>
+        <StackContainer center>
+          <small>¿Ya tienes cuenta? <a href={rawRoutes.index.login}>Inicia Sesión</a></small>
+          <small>¿Olvidaste tu contraseña? <a href={rawRoutes.index.recovery}>Recupérala aquí</a></small>
+        </StackContainer>
+      </Card>
     </main>
   )
 }
