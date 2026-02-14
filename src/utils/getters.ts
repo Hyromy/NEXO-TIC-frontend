@@ -14,3 +14,10 @@ export function getAccessToken() {
 export function getRefreshToken() {
   return localStorage.getItem("refreshToken") || ""
 }
+
+export function getPairTokens() {
+  return {
+    accessToken: getAccessToken(),
+    refreshToken: getRefreshToken(),
+  }
+}

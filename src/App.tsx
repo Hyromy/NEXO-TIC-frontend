@@ -6,6 +6,8 @@ import {
 } from "./routes"
 import { AuthProvider, ProtectedRoute } from "./context/Auth"
 
+import NotFound from "./pages/common/NotFound"
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -21,6 +23,7 @@ export default function App() {
               </ProtectedRoute>
             } />
           ))}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

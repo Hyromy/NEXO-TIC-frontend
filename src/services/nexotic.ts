@@ -24,14 +24,20 @@ export const authService = {
   endpoint: API_URL + "auth/",
 
   login: (username: string, password: string) => (
-    api.post(authService.endpoint + "login/", {
-      username,
-      password,
-    })
+    api.post(
+      authService.endpoint + "login/",
+      {
+        username,
+        password,
+      },
+      true
+    )
   ),
 
-  refresh: () => (
-    null
+  refresh: (refreshToken: string) => (
+    api.post(authService.endpoint + "refresh/", {
+      refresh: refreshToken,
+    })
   ),
 
   signup: (username: string, email: string) => (
