@@ -3,6 +3,14 @@ import Signup from "./pages/Signup"
 import Recovery from "./pages/Recovery"
 import Dashboard from "./pages/Dashboard"
 import { type JSX } from "react"
+import AdministracionGeneral from "./pages/Administracion_General"
+import AvisosRH from "./pages/Avisos_RH"
+import GestionEmpleados from "./pages/Gestion_Empleados"
+import Incidencias from "./pages/Incidencias"
+import Reportes from "./pages/Reportes"
+import Solicitudes from "./pages/Solicitudes"
+import Aprobaciones from "./pages/Aprobaciones"
+import Vacaciones from "./pages/Vacaciones"
 
 /**
  * Define application routes
@@ -25,4 +33,13 @@ export const publicRoutes: appRoute[] = [
 
 export const protectedRoutes: appRoute[] = [
   { path: "/dashboard", element: <Dashboard /> },
+  { path: "/vacaciones", element: <Vacaciones/>},
+  { path: "/administracion", element: <AdministracionGeneral /> },
+  { path: "/gestion-empleados", element: <GestionEmpleados /> },
+  { path: "/aprobaciones", element: <Aprobaciones/> },
+  { path: "/avisos", element: <AvisosRH /> },
+  { path: "/incidencias", element: <Incidencias /> },
+  { path: "/reportes", element: <Reportes /> },
+  { path: "/solicitudes", element: <Solicitudes /> },
+  
 ]
