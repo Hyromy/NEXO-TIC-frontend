@@ -8,6 +8,11 @@ import {
 
 import { Navigate } from "react-router-dom"
 
+import useApi from "../hooks/useApi"
+import { authService } from "../services/nexotic"
+import { clearTokens } from "../utils/setters"
+import { getRefreshToken } from "../utils/getters"
+
 type AuthContextType = {
   isAuthenticated: boolean
   isLoading: boolean
@@ -20,6 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const { error, execute } = useApi<any>()
 
   const checkAuth = () => {
     // TODO: implement authentication check logic
@@ -31,8 +37,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const logout = () => {
-    setIsAuthenticated(false)
+  const logout = async () => {
+    const response = await execute(authService.logout(
+      getRefreshToken()
+    ))
+
+    if (error) {
+      const msg = "Error cerrando sesión: " + error
+      console.error(msg)
+      alert(msg)
+    }
+
+    if (response && response.ok) {
+      clearTokens()
+      setIsAuthenticated(false)
+    }
   }
 
   return <AuthContext.Provider value={{isAuthenticated, isLoading, logout, checkAuth }}>

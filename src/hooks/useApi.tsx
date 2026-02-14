@@ -12,7 +12,10 @@ export default function useApi<T>() {
 		try {
 			const response = await apiCall
 			if (response.error) {
-				throw new Error(response.message || 'Error en la petición.')
+				throw new Error(
+					response.originalError.error
+					|| response.originalError.detail
+				)
 			}
 			setData(response)
 			return response

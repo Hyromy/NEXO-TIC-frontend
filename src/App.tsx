@@ -8,8 +8,8 @@ import { AuthProvider, ProtectedRoute } from "./context/Auth"
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
         <Routes>
           {publicRoutes.map(({ path, element }, index) => (
             <Route key={index} path={path} element={element} />
@@ -22,7 +22,7 @@ export default function App() {
             } />
           ))}
         </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </BrowserRouter>
   )
 }

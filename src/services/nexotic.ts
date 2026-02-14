@@ -1,6 +1,6 @@
 import { api } from "./api"
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/'
 
 const param = (id: number) => (
   Number.isInteger(id) && id > 0
@@ -17,5 +17,37 @@ export const userService = {
 
   create: (data: {username: string, password: string}) => (
     api.post(userService.endpoint, data)
+  ),
+}
+
+export const authService = {
+  endpoint: API_URL + "auth/",
+
+  login: (username: string, password: string) => (
+    api.post(authService.endpoint + "login/", {
+      username,
+      password,
+    })
+  ),
+
+  refresh: () => (
+    null
+  ),
+
+  signup: (username: string, email: string) => (
+    api.post(authService.endpoint + "signup/", {
+      username,
+      email,
+    })
+  ),
+
+  recover: () => (
+    null
+  ),
+
+  logout: (refresh: string) => (
+    api.post(authService.endpoint + "logout/", {
+      refresh,
+    })
   ),
 }
