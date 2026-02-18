@@ -1,73 +1,113 @@
-# React + TypeScript + Vite
+# NEXO_TIC (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![React](https://img.shields.io/badge/React-19.2.0-blue?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue?logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-7.2.4-646CFF?logo=vite)
 
-Currently, two official plugins are available:
+## ÍNDICE
+- [NEXO\_TIC (Frontend)](#nexo_tic-frontend)
+  - [ÍNDICE](#índice)
+  - [DESCRIPCIÓN](#descripción)
+  - [VARIABLES DE ENTORNO](#variables-de-entorno)
+  - [INSTALACIÓN](#instalación)
+  - [DESPLIEGUE](#despliegue)
+    - [Local](#local)
+    - [Docker](#docker)
+  - [TESTING](#testing)
+    - [Ejecutar Tests](#ejecutar-tests)
+    - [CI/CD Automático](#cicd-automático)
+    - [Más Información](#más-información)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## DESCRIPCIÓN
 
-## React Compiler
+Frontend del sistema de gestión empresarial **NEXO_TIC**. Aplicación SPA (Single Page Application) construida con React, TypeScript y Vite que proporciona interfaces para:
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+- **Autenticación:** Login, Registro, Recuperación de contraseña
+- **Gestión de Empleados:** Vacaciones, incidencias, solicitudes
+- **Recursos Humanos:** Aprobaciones, avisos, reportes, gestión de empleados
+- **Dashboard:** Panel de control personalizado por rol
 
-## Expanding the ESLint configuration
+## VARIABLES DE ENTORNO
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+En la raíz del proyecto crea un archivo `.env` y define las variables de entorno necesarias.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+| Clave | Valor por defecto | Descripción |
+| - | - | - |
+| `VITE_API_URL` | `"http://localhost:8000/"` | URL base del backend API |
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+> [!NOTE]
+> Las variables de entorno en Vite deben tener el prefijo `VITE_` para ser accesibles en el cliente.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## INSTALACIÓN
+
+1. Instalación de dependencias
+   ```bash
+   npm i
+   ```
+
+## DESPLIEGUE
+
+### Local
+
+Inicia el servidor de desarrollo, este se encuentra en el puerto __5173__ por defecto.
+
+```bash
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Para construir la versión de producción:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+Para previsualizar la build de producción localmente:
+
+```bash
+npm run preview
+```
+
+### Docker
+
+Crea la imagen del proyecto
+```bash
+docker build -t app_frontend .
+```
+
+Crea un contenedor de la imagen previamente construida.
+```bash
+docker run -d --name app_frontend_container -p 80:80 app_frontend
+```
+
+## TESTING
+
+El proyecto incluye una suite completa de tests usando **Vitest** y **Testing Library** con cobertura de:
+
+- ✅ Componentes UI
+- ✅ Hooks personalizados
+- ✅ Contextos (Auth)
+- ✅ Utilidades
+- ✅ Servicios API
+
+### Ejecutar Tests
+
+```bash
+# Ejecutar todos los tests
+npm test
+
+# Tests con interfaz gráfica
+npm run test:ui
+
+# Generar reporte de coverage
+npm run test:coverage
+```
+
+### CI/CD Automático
+
+Los tests se ejecutan automáticamente en **GitHub Actions** cuando:
+- Se hace push a `dev` o `main`
+- Se crea un Pull Request hacia `dev` o `main`
+
+### Más Información
+
+Para detalles completos sobre testing, debugging, y flujo de trabajo CI/CD, consulta [TESTING.md](./TESTING.md).
