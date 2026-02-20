@@ -9,6 +9,7 @@ import {
 import { Navigate } from "react-router-dom"
 
 import useApi from "../hooks/useApi"
+import useUser, { type UserType } from "../hooks/useUser"
 import { authService } from "../services/nexotic"
 import { clearTokens } from "../utils/setters"
 import { getRefreshToken, getPairTokens } from "../utils/getters"
@@ -28,7 +29,7 @@ type AuthProviderProps = {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
-  const { error, execute } = useApi<any>()
+  const { execute } = useApi<any>()
 
   const checkAuth = () => {
     const { accessToken, refreshToken } = getPairTokens()
@@ -52,17 +53,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const logout = async () => {
-    const response = await execute(authService.logout(
-      getRefreshToken()
-    ))
+    try{
+      await execute(authService.logout(
+        getRefreshToken()
+      ))
+    } catch (err) {
+      console.error("Error during logout:", err)
 
-    if (error) {
-      const msg = "Error cerrando sesión: " + error
-      console.error(msg)
-      alert(msg)
-    }
-
-    if (response && response.ok) {
+    } finally {
       clearTokens()
       setIsAuthenticated(false)
     }
@@ -84,20 +82,31 @@ export function useAuth() {
 
 type ProtectedRouteProps = { 
   children: ReactNode,
-  navigateTo?: string,
+  notAuthNavigateTo?: string,
+  notUserNavigateTo?: string,
+  allowedFor?: Array<UserType | "all">
 }
 export function ProtectedRoute({ 
   children,
-  navigateTo = "/"
+  notAuthNavigateTo = "/",
+  notUserNavigateTo = "/",
+  allowedFor
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { userType, loading: permissionsLoading } = useUser()
 
-  if (isLoading) {
+  const hasPermissions = allowedFor?.includes("all") || allowedFor?.includes(userType as UserType)
+
+  if (authLoading || permissionsLoading) {
     return <div>Loading...</div>
   }
 
   if (!isAuthenticated) {
-    return <Navigate to={navigateTo} replace />
+    return <Navigate to={notAuthNavigateTo} replace />
+  }
+
+  if (!hasPermissions) {
+    return <Navigate to={notUserNavigateTo} replace />
   }
 
   return <>

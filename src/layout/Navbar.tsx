@@ -1,5 +1,8 @@
 import { type ReactNode } from "react"
 
+import { getHumanName } from "../utils/getters"
+import { clearTokens } from "../utils/setters"
+
 import { useAuth } from "../context/Auth"
 
 import { Dropdown } from "../components/Dropdown"
@@ -21,7 +24,7 @@ function NavbarGroup({
 }
 
 export default function Navbar() {
-  const { logout } = useAuth()
+  const { logout, checkAuth } = useAuth()
 
   const changePasswordHandler = () => {
     alert("Cambiar contraseña")
@@ -31,6 +34,8 @@ export default function Navbar() {
     const confirmation = confirm("¿Estás seguro que quieres cerrar sesión?")
     if (confirmation) {
       logout()
+      clearTokens()
+      checkAuth()
     }
   }
 
@@ -59,7 +64,7 @@ export default function Navbar() {
         <NavbarGroup>
           <Dropdown items={dropdownItems} variant="light" inverted>
             <i className="bi bi-person-circle me-2"></i>
-            Hola usuario
+            Hola {getHumanName()}
           </Dropdown>
         </NavbarGroup>
       </div>

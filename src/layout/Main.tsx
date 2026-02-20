@@ -7,15 +7,11 @@ import Foot from "./Foot"
 import { Canvas } from "../components/Canvas"
 import { Button } from "../components/Button"
 
-import { rawRoutes } from "../routes"
+import { protectedRoutes } from "../routes"
 
 import { useNavigate } from "react-router-dom"
-
-type module = {
-  label: string
-  icon: string
-  path?: string
-}
+import useUser from "../hooks/useUser"
+import { Spinner } from "../components/Spinner"
 
 type MainProps = {
   children: ReactNode
@@ -23,69 +19,28 @@ type MainProps = {
 export default function Main({
   children
 }: MainProps) {
-  const modules: module[] = [
-    { 
-      label: "Inicio",
-      path: rawRoutes.common.home,
-      icon: "house-door",
-    },
-    { 
-      label: "Vacaciones",
-      path: rawRoutes.employee.holidays,
-      icon: "calendar-check",
-    },
-    { 
-      label: "Solicitudes",
-      path: rawRoutes.common.requests,
-      icon: "view-list",
-    },
-    { 
-      label: "Incidencias",
-      path: rawRoutes.common.incidents,
-      icon: "exclamation-triangle-fill",
-    },
-    { 
-      label: "Empleados",
-      path: rawRoutes.rrhh.employees,
-      icon: "people-fill",
-    },
-    { 
-      label: "Aprobaciones",
-      path: rawRoutes.rrhh.approvals,
-      icon: "file-earmark-check-fill",
-    },
-    { 
-      label: "Reportes",
-      path: rawRoutes.rrhh.reports,
-      icon: "file-earmark-bar-graph-fill",
-    },
-    { 
-      label: "Avisos",
-      path: rawRoutes.rrhh.notices,
-      icon: "megaphone-fill",
-    },
-  ]
-
-  const infoModules = [
-    { 
-      label: "Reglamento",
-      path: rawRoutes.common.rules,
-      icon: "file-ruled-fill",
-    },
-    { 
-      label: "Términos y políticas",
-      path: rawRoutes.common.terms,
-      icon: "shield-check",
-    },
-  ]
-
   const navigate = useNavigate()
+  const { loading, userType } = useUser()
+
+  const routeAvaiability = (route: typeof protectedRoutes[0]) => (
+    route.allowedFor!.includes("all") || route.allowedFor!.includes(userType!)
+  )
+
+  const moduleFilter = (route: typeof protectedRoutes[0]) => (
+    route.type == "module"
+    && routeAvaiability(route) 
+  )
+
+  const infoFilter = (route: typeof protectedRoutes[0]) => (
+    route.type == "info"
+    && routeAvaiability(route) 
+  )
 
   const bsIconClasses = (icon: string) => `bi bi-${icon} me-2`
   const currentPath = window.location.pathname
   const menu = (
     <Menu 
-      modules={modules.map((module, index) => (
+      modules={protectedRoutes.filter(moduleFilter).map((module, index) => (
         <Button 
           key={index}
           variant={currentPath.includes(module.path!) ? "primary" : "light"}
@@ -96,7 +51,7 @@ export default function Main({
           {module.label}
         </Button>
       ))}
-      bottom={infoModules.map((module, index) => (
+      bottom={protectedRoutes.filter(infoFilter).map((module, index) => (
         <Button
           key={index}
           variant={currentPath.includes(module.path!) ? "primary" : "light"}
@@ -110,7 +65,7 @@ export default function Main({
     />
   )
 
-  return (
+  return loading ? <Spinner /> : (
     <div className="d-flex flex-column min-vh-100">
       <div className="flex-grow-1 d-flex">
         <aside
