@@ -6,9 +6,11 @@ import { AuthProvider, useAuth, ProtectedRoute } from "../context/Auth"
 
 // Mock dependencies
 vi.mock("../hooks/useApi")
+vi.mock("../hooks/useUser")
 vi.mock("../services/nexotic")
 vi.mock("../utils/setters")
 vi.mock("../utils/getters")
+vi.mock("../utils/jwt")
 
 // Mock React Router Navigate
 vi.mock("react-router-dom", async () => {
@@ -22,9 +24,11 @@ vi.mock("react-router-dom", async () => {
 })
 
 import useApi from "../hooks/useApi"
+import useUser from "../hooks/useUser"
 import { authService } from "../services/nexotic"
 import { clearTokens } from "../utils/setters"
-import { getRefreshToken } from "../utils/getters"
+import { getRefreshToken, getPairTokens } from "../utils/getters"
+import { isTokenExpired } from "../utils/jwt"
 
 describe("Context package", () => {
   describe("Auth Context", () => {
@@ -46,7 +50,20 @@ describe("Context package", () => {
         execute: mockExecute as any,
       })
 
+      vi.mocked(useUser).mockReturnValue({
+        userType: "employee",
+        loading: false,
+        canAccessEmployee: () => true,
+        canAccessRRHH: () => false,
+        canAccessAdmin: () => false,
+      })
+
       vi.mocked(getRefreshToken).mockReturnValue("mock-refresh-token")
+      vi.mocked(getPairTokens).mockReturnValue({
+        accessToken: "mock-access-token",
+        refreshToken: "mock-refresh-token",
+      })
+      vi.mocked(isTokenExpired).mockReturnValue(false)
       vi.mocked(authService.logout).mockReturnValue(Promise.resolve({} as any))
     })
 
@@ -230,17 +247,9 @@ describe("Context package", () => {
         })
       })
 
-      it("should show error alert when logout fails", async () => {
+      it("should log error when logout fails", async () => {
         const errorMessage = "Network error"
-
-        vi.mocked(useApi).mockReturnValue({
-          data: null,
-          loading: false,
-          error: errorMessage,
-          execute: mockExecute as any,
-        })
-
-        mockExecute.mockResolvedValue(null)
+        mockExecute.mockRejectedValue(new Error(errorMessage))
 
         const TestComponent = () => {
           const { logout } = useAuth()
@@ -258,16 +267,16 @@ describe("Context package", () => {
 
         await waitFor(() => {
           expect(mockConsoleError).toHaveBeenCalledWith(
-            expect.stringContaining(errorMessage),
+            "Error during logout:",
+            expect.any(Error)
           )
-          expect(mockAlert).toHaveBeenCalledWith(
-            expect.stringContaining(errorMessage),
-          )
+          // Should clear tokens even on error
+          expect(clearTokens).toHaveBeenCalled()
         })
       })
 
-      it("should not clear tokens when logout response is not ok", async () => {
-        mockExecute.mockResolvedValue({ ok: false })
+      it("should clear tokens even when logout fails", async () => {
+        mockExecute.mockRejectedValue(new Error("Server error"))
 
         const TestComponent = () => {
           const { logout } = useAuth()
@@ -285,9 +294,9 @@ describe("Context package", () => {
 
         await waitFor(() => {
           expect(mockExecute).toHaveBeenCalled()
+          // Should always clear tokens in finally block
+          expect(clearTokens).toHaveBeenCalled()
         })
-
-        expect(clearTokens).not.toHaveBeenCalled()
       })
     })
 
@@ -296,7 +305,7 @@ describe("Context package", () => {
         render(
           <BrowserRouter>
             <AuthProvider>
-              <ProtectedRoute>
+              <ProtectedRoute allowedFor={["all"]}>
                 <div>Protected Content</div>
               </ProtectedRoute>
             </AuthProvider>
@@ -333,28 +342,34 @@ describe("Context package", () => {
       })
 
       it("should navigate to default route when not authenticated", async () => {
-        // Note: This test is limited because checkAuth() sets authenticated to true
-        // In a real implementation, checkAuth would verify tokens and could return false
-        // For now, we verify that the component can handle the flow
+        // Mock no tokens available
+        vi.mocked(getPairTokens).mockReturnValue({
+          accessToken: "",
+          refreshToken: "",
+        })
 
         render(
           <BrowserRouter>
             <AuthProvider>
-              <ProtectedRoute>
+              <ProtectedRoute allowedFor={["all"]}>
                 <div>Protected Content</div>
               </ProtectedRoute>
             </AuthProvider>
           </BrowserRouter>,
         )
 
-        // Since checkAuth sets authenticated to true by default,
-        // protected content will be shown
         await waitFor(() => {
-          expect(screen.getByText("Protected Content")).toBeInTheDocument()
+          expect(screen.getByTestId("navigate-to")).toHaveTextContent("/")
         })
       })
 
       it("should navigate to custom route when not authenticated", async () => {
+        // Mock no tokens available
+        vi.mocked(getPairTokens).mockReturnValue({
+          accessToken: "",
+          refreshToken: "",
+        })
+
         const TestAuthProvider = ({
           children,
         }: {
@@ -370,35 +385,39 @@ describe("Context package", () => {
         // This tests the navigateTo prop functionality
         render(
           <TestAuthProvider>
-            <ProtectedRoute navigateTo="/login">
+            <ProtectedRoute notAuthNavigateTo="/login" allowedFor={["all"]}>
               <div>Protected Content</div>
             </ProtectedRoute>
           </TestAuthProvider>,
         )
 
-        // Since checkAuth sets authenticated to true, protected content shows
         await waitFor(() => {
-          expect(screen.getByText("Protected Content")).toBeInTheDocument()
+          expect(screen.getByTestId("navigate-to")).toHaveTextContent("/login")
         })
       })
 
-      it("should pass navigateTo prop to Navigate component", () => {
-        // Test that the navigateTo prop is properly passed
-        // This would require mocking the auth state to be false
+      it("should pass navigateTo prop to Navigate component", async () => {
+        // Mock no tokens available
+        vi.mocked(getPairTokens).mockReturnValue({
+          accessToken: "",
+          refreshToken: "",
+        })
+
         const customPath = "/custom-login"
 
         render(
           <BrowserRouter>
             <AuthProvider>
-              <ProtectedRoute navigateTo={customPath}>
+              <ProtectedRoute notAuthNavigateTo={customPath} allowedFor={["all"]}>
                 <div>Content</div>
               </ProtectedRoute>
             </AuthProvider>
           </BrowserRouter>,
         )
 
-        // Since auth is true by default, content renders
-        // To test navigate path, we'd need to control auth state
+        await waitFor(() => {
+          expect(screen.getByTestId("navigate-to")).toHaveTextContent(customPath)
+        })
       })
     })
 

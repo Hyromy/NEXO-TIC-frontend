@@ -34,11 +34,12 @@ export const authService = {
     )
   ),
 
-  refresh: (refreshToken: string) => (
-    api.post(authService.endpoint + "refresh/", {
+  refresh: (refreshToken?: string) => {
+    if (!refreshToken) return null
+    return api.post(authService.endpoint + "refresh/", {
       refresh: refreshToken,
     })
-  ),
+  },
 
   signup: (username: string, email: string) => (
     api.post(authService.endpoint + "signup/", {

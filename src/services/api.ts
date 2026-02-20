@@ -16,7 +16,7 @@ const getCommonHeaders = () => {
   }
 }
 
-async function request(
+export async function request(
   endpoint: string,
   options: RequestInit = {},
   ignoreAuth: boolean = false
@@ -25,7 +25,10 @@ async function request(
   if (accessToken && isTokenExpired(accessToken) && !ignoreAuth) {
     const refreshed = await refreshAccessToken()
     if (!refreshed) {
-      throw new Error("Session outdated. Please log in again.")
+      return {
+        error: true,
+        message: "Session outdated. Please log in again."
+      }
     }
   }
 
@@ -57,7 +60,7 @@ async function request(
         if (retryResponse.ok) {
           return retryData
         } else {
-          throw {
+          return {
             error: true,
             status: retryResponse.status,
             message: retryData.message || "Error in the request after token refresh",
@@ -65,7 +68,10 @@ async function request(
           }
         }
       } else {
-        throw new Error('Session expired. Please log in again.')
+        return {
+          error: true,
+          message: 'Session expired. Please log in again.'
+        }
       }
     }
 
@@ -75,10 +81,10 @@ async function request(
       return data
 
     } else {
-      throw {
+      return {
         error: true,
         status: response.status,
-        message: data.message || 'Error in the request.',
+        message: data.message || 'Error en la petición',
         originalError: data
       }
     }

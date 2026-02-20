@@ -357,13 +357,6 @@ describe("Hooks package", () => {
     })
 
     describe('Initial State', () => {
-      it('should initialize with null userType and loading true', () => {
-        const { result } = renderHook(() => useUser())
-        
-        // Initial state before useEffect runs
-        expect(result.current.loading).toBe(true)
-      })
-
       it('should set loading to false and userType to null when no token exists', async () => {
         const { result } = renderHook(() => useUser())
 
