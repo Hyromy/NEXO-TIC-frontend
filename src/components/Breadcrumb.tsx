@@ -15,16 +15,12 @@ export function Breadcrumb({
         {items.map((item, index) => {
           const isLast = index == lastIndex
           
-          const content = <li className={"breadcrumb-item" + (isLast ? " active" : "")} aria-current={isLast ? "page" : undefined}>
-            {isLast 
-              ? item.label
-              : <a href={item.href}>{item.label}</a>
-            }
-          </li>
-
           return (
-            <li className="breadcrumb-item">
-              {content}
+            <li key={index} className={"breadcrumb-item" + (isLast ? " active" : "")} aria-current={isLast ? "page" : undefined}>
+              {isLast 
+                ? item.label
+                : <a href={item.href}>{item.label}</a>
+              }
             </li>
           )
         })}

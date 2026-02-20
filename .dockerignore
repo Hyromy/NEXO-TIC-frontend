@@ -42,8 +42,7 @@ docker-compose.yml
 azure-pipelines.yml
 
 # Documentation
-README.md
-CHANGELOG.md
+*.md
 LICENSE
 docs/
 
