@@ -1,9 +1,13 @@
-import { describe, it, expect } from "vitest"
-import { getDataFromForm } from "../utils/getters"
+import { describe, it, expect, beforeEach } from "vitest"
+import { getDataFromForm, getHumanName } from "../utils/getters"
 import * as validator from "../utils/validator"
 
 describe("Utils package", () => {
   describe("getters.ts", () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
     it("should get data from form", () => {
       const formData = new FormData()
       formData.append("username", "testuser")
@@ -14,6 +18,88 @@ describe("Utils package", () => {
       expect(data).toEqual({
         username: "testuser",
         password: "testpass",
+      })
+    })
+
+    describe('getHumanName', () => {
+      it('should return full name when first_name and last_name exist', () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'johndoe',
+          first_name: 'John',
+          last_name: 'Doe'
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const humanName = getHumanName()
+        expect(humanName).toBe('JohnDoe')
+      })
+
+      it('should return only first name when last_name is missing', () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'johndoe',
+          first_name: 'John'
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const humanName = getHumanName()
+        expect(humanName).toBe('John')
+      })
+
+      it('should return username when first_name is missing', () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'johndoe',
+          last_name: 'Doe'
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const humanName = getHumanName()
+        expect(humanName).toBe('johndoe')
+      })
+
+      it('should return username when both names are empty strings', () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'johndoe',
+          first_name: '',
+          last_name: ''
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const humanName = getHumanName()
+        expect(humanName).toBe('johndoe')
+      })
+
+      it('should return null when no token exists', () => {
+        const humanName = getHumanName()
+        expect(humanName).toBeNull()
+      })
+
+      it('should return null when token is invalid', () => {
+        localStorage.setItem('accessToken', 'invalid.token')
+
+        const humanName = getHumanName()
+        expect(humanName).toBeNull()
+      })
+
+      it('should handle first name with spaces', () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'maryjane',
+          first_name: 'Mary Jane',
+          last_name: 'Watson'
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const humanName = getHumanName()
+        expect(humanName).toBe('Mary JaneWatson')
       })
     })
   })
@@ -44,3 +130,13 @@ describe("Utils package", () => {
     })
   })
 })
+
+// Helper function to create mock JWT tokens
+function createMockToken(payload: any): string {
+  const header = { alg: 'HS256', typ: 'JWT' }
+  const encodedHeader = btoa(JSON.stringify(header))
+  const encodedPayload = btoa(JSON.stringify(payload))
+  const signature = 'mock-signature'
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`
+}

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import useApi from '../hooks/useApi'
+import useUser from '../hooks/useUser'
 
 describe("Hooks package", () => {
   describe('useApi Hook', () => {
@@ -348,4 +349,192 @@ describe("Hooks package", () => {
       })
     })
   })
+
+  describe('useUser Hook', () => {
+    beforeEach(() => {
+      // Clear localStorage before each test
+      localStorage.clear()
+    })
+
+    describe('Initial State', () => {
+      it('should initialize with null userType and loading true', () => {
+        const { result } = renderHook(() => useUser())
+        
+        // Initial state before useEffect runs
+        expect(result.current.loading).toBe(true)
+      })
+
+      it('should set loading to false and userType to null when no token exists', async () => {
+        const { result } = renderHook(() => useUser())
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false)
+          expect(result.current.userType).toBeNull()
+        })
+      })
+    })
+
+    describe('User Type Detection', () => {
+      it('should identify employee user type', async () => {
+        // Create a mock JWT token for employee
+        const mockPayload = {
+          user_id: 1,
+          username: 'employee',
+          is_staff: false,
+          is_superuser: false
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const { result } = renderHook(() => useUser())
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false)
+          expect(result.current.userType).toBe('employee')
+        })
+      })
+
+      it('should identify admin user type when is_staff is true', async () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'admin',
+          is_staff: true,
+          is_superuser: false
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const { result } = renderHook(() => useUser())
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false)
+          expect(result.current.userType).toBe('admin')
+        })
+      })
+
+      it('should identify rrhh user type when is_superuser is true', async () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'rrhh',
+          is_staff: false,
+          is_superuser: true
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const { result } = renderHook(() => useUser())
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false)
+          expect(result.current.userType).toBe('rrhh')
+        })
+      })
+
+      it('should prioritize is_staff over is_superuser', async () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'admin',
+          is_staff: true,
+          is_superuser: true
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const { result } = renderHook(() => useUser())
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false)
+          expect(result.current.userType).toBe('admin')
+        })
+      })
+    })
+
+    describe('Permission Functions', () => {
+      it('employee should have employee access', async () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'employee',
+          is_staff: false,
+          is_superuser: false
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const { result } = renderHook(() => useUser())
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false)
+        })
+
+        expect(result.current.canAccessEmployee()).toBe(true)
+        expect(result.current.canAccessRRHH()).toBe(false)
+        expect(result.current.canAccessAdmin()).toBe(false)
+      })
+
+      it('rrhh should have rrhh access but not admin', async () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'rrhh',
+          is_staff: false,
+          is_superuser: true
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const { result } = renderHook(() => useUser())
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false)
+        })
+
+        expect(result.current.canAccessEmployee()).toBe(false)
+        expect(result.current.canAccessRRHH()).toBe(true)
+        expect(result.current.canAccessAdmin()).toBe(false)
+      })
+
+      it('admin should have access to all sections', async () => {
+        const mockPayload = {
+          user_id: 1,
+          username: 'admin',
+          is_staff: true,
+          is_superuser: false
+        }
+        const mockToken = createMockToken(mockPayload)
+        localStorage.setItem('accessToken', mockToken)
+
+        const { result } = renderHook(() => useUser())
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false)
+        })
+
+        expect(result.current.canAccessEmployee()).toBe(true)
+        expect(result.current.canAccessRRHH()).toBe(true)
+        expect(result.current.canAccessAdmin()).toBe(true)
+      })
+    })
+
+    describe('Invalid Token Handling', () => {
+      it('should handle invalid token gracefully', async () => {
+        localStorage.setItem('accessToken', 'invalid.token.here')
+
+        const { result } = renderHook(() => useUser())
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false)
+          expect(result.current.userType).toBeNull()
+        })
+      })
+    })
+  })
 })
+
+// Helper function to create mock JWT tokens
+function createMockToken(payload: any): string {
+  const header = { alg: 'HS256', typ: 'JWT' }
+  const encodedHeader = btoa(JSON.stringify(header))
+  const encodedPayload = btoa(JSON.stringify(payload))
+  const signature = 'mock-signature'
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`
+}
