@@ -42,7 +42,7 @@ export default function Login() {
   useEffect(() => {
     if (data && data.access && data.refresh) {
       setPairTokens(data.access, data.refresh)
-      navigate("/dashboard")
+      navigate(rawRoutes.common.home)
     }
     if (error) {
       alert("Error iniciando sesión: " + error)
