@@ -1,6 +1,17 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+
+const { mockShow, mockHide, mockGetOrCreateInstance } = vi.hoisted(() => {
+  const mockShow = vi.fn()
+  const mockHide = vi.fn()
+  const mockGetOrCreateInstance = vi.fn(() => ({ show: mockShow, hide: mockHide }))
+  return { mockShow, mockHide, mockGetOrCreateInstance }
+})
+
+vi.mock('bootstrap', () => ({
+  Modal: { getOrCreateInstance: mockGetOrCreateInstance }
+}))
 import { Button, ButtonGroup } from "../components/Button"
 import { Accordion } from "../components/Accordion"
 import { Alert } from "../components/Alert"
@@ -22,7 +33,7 @@ import {
   Range
 } from "../components/Form"
 import { List } from "../components/List"
-import { Modal } from "../components/Modal"
+import { Modal, openModal, closeModal } from "../components/Modal"
 import Progress from "../components/Progress"
 import { Spinner } from "../components/Spinner"
 import { Toast } from "../components/Toast"
@@ -629,6 +640,73 @@ describe("Components package", () => {
     it('should have close button', () => {
       render(<Modal>Content</Modal>)
       expect(screen.getByLabelText('Close')).toBeInTheDocument()
+    })
+
+    it('should apply static backdrop when isStatic is true', () => {
+      const { container } = render(<Modal isStatic>Content</Modal>)
+      const modalEl = container.querySelector('.modal')
+      expect(modalEl).toHaveAttribute('data-bs-backdrop', 'static')
+      expect(modalEl).toHaveAttribute('data-bs-keyboard', 'false')
+    })
+
+    it('should not have static attributes when isStatic is false', () => {
+      const { container } = render(<Modal>Content</Modal>)
+      const modalEl = container.querySelector('.modal')
+      expect(modalEl).not.toHaveAttribute('data-bs-backdrop')
+      expect(modalEl).not.toHaveAttribute('data-bs-keyboard')
+    })
+
+    it('should apply size class when size prop is provided', () => {
+      const { container: containerSm } = render(<Modal size="sm">Content</Modal>)
+      expect(containerSm.querySelector('.modal-dialog')).toHaveClass('modal-sm')
+
+      const { container: containerLg } = render(<Modal size="lg">Content</Modal>)
+      expect(containerLg.querySelector('.modal-dialog')).toHaveClass('modal-lg')
+
+      const { container: containerXl } = render(<Modal size="xl">Content</Modal>)
+      expect(containerXl.querySelector('.modal-dialog')).toHaveClass('modal-xl')
+    })
+
+    it('should not have size class when size prop is not provided', () => {
+      const { container } = render(<Modal>Content</Modal>)
+      const dialog = container.querySelector('.modal-dialog')
+      expect(dialog?.className).toBe('modal-dialog')
+    })
+
+    it('openModal should call BSModal.getOrCreateInstance().show()', () => {
+      mockShow.mockClear()
+      mockGetOrCreateInstance.mockClear()
+
+      const { container } = render(<Modal id="test-open-modal">Content</Modal>)
+      const el = container.querySelector('#test-open-modal') as HTMLElement
+
+      openModal('test-open-modal')
+      expect(mockGetOrCreateInstance).toHaveBeenCalledWith(el)
+      expect(mockShow).toHaveBeenCalled()
+    })
+
+    it('closeModal should call BSModal.getOrCreateInstance().hide()', () => {
+      mockHide.mockClear()
+      mockGetOrCreateInstance.mockClear()
+
+      const { container } = render(<Modal id="test-close-modal">Content</Modal>)
+      const el = container.querySelector('#test-close-modal') as HTMLElement
+
+      closeModal('test-close-modal')
+      expect(mockGetOrCreateInstance).toHaveBeenCalledWith(el)
+      expect(mockHide).toHaveBeenCalled()
+    })
+
+    it('openModal should do nothing if element does not exist', () => {
+      mockGetOrCreateInstance.mockClear()
+      openModal('non-existent-modal')
+      expect(mockGetOrCreateInstance).not.toHaveBeenCalled()
+    })
+
+    it('closeModal should do nothing if element does not exist', () => {
+      mockGetOrCreateInstance.mockClear()
+      closeModal('non-existent-modal')
+      expect(mockGetOrCreateInstance).not.toHaveBeenCalled()
     })
   })
 

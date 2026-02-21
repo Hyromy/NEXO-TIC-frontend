@@ -358,6 +358,20 @@ describe('Services package', () => {
           })
         )
       })
+
+      it('should change password with new_password', async () => {
+        await authService.changePassword('newSecurePass123')
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'auth/reset-password/',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+              new_password: 'newSecurePass123'
+            })
+          })
+        )
+      })
     })
   })
 })
