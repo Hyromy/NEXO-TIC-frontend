@@ -1,12 +1,37 @@
+import { isTokenExpired } from '../utils/jwt'
+import { getAccessToken, getRefreshToken } from '../utils/getters'
+import { setPairTokens, clearTokens } from '../utils/setters'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/'
+const REFRESH_ENDPOINT = API_URL + 'auth/refresh/'
+
+let isRefreshing = false
+let refreshPromise: Promise<boolean> | null = null
+
 const getCommonHeaders = () => {
-  const token = localStorage.getItem('accessToken')
+  const token = getAccessToken()
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
   }
 }
 
-export async function request(endpoint: string, options: RequestInit = {}) {
+export async function request(
+  endpoint: string,
+  options: RequestInit = {},
+  ignoreAuth: boolean = false
+) {
+  const accessToken = getAccessToken()
+  if (accessToken && isTokenExpired(accessToken) && !ignoreAuth) {
+    const refreshed = await refreshAccessToken()
+    if (!refreshed) {
+      return {
+        error: true,
+        message: "Session outdated. Please log in again."
+      }
+    }
+  }
+
   const config: RequestInit = {
     ...options,
     headers: {
@@ -18,13 +43,45 @@ export async function request(endpoint: string, options: RequestInit = {}) {
   try {
     const response = await fetch(endpoint, config)
 
+    if (response.status == 401) {
+      const refreshed = await refreshAccessToken()
+      
+      if (refreshed) {
+        const retryConfig: RequestInit = {
+          ...options,
+          headers: {
+            ...getCommonHeaders(),
+            ...options.headers,
+          },
+        }
+        const retryResponse = await fetch(endpoint, retryConfig)
+        const retryData = await retryResponse.json().catch(() => ({}))
+
+        if (retryResponse.ok) {
+          return retryData
+        } else {
+          return {
+            error: true,
+            status: retryResponse.status,
+            message: retryData.message || "Error in the request after token refresh",
+            originalError: retryData
+          }
+        }
+      } else {
+        return {
+          error: true,
+          message: 'Session expired. Please log in again.'
+        }
+      }
+    }
+
     const data = await response.json().catch(() => ({})) 
 
     if (response.ok) {
       return data
 
     } else {
-      throw {
+      return {
         error: true,
         status: response.status,
         message: data.message || 'Error en la petición',
@@ -37,25 +94,82 @@ export async function request(endpoint: string, options: RequestInit = {}) {
 
     return {
       error: true,
-      message: err.message || 'Ocurrió un error inesperado de red.',
+      message: err.message || 'Network error or server is unreachable.',
       object: err,
     }
   }
 }
 
+async function refreshAccessToken(): Promise<boolean> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise
+  }
+
+  isRefreshing = true
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = getRefreshToken()
+      if (!refreshToken) {
+        clearTokens()
+        return false
+      }
+
+      const response = await fetch(REFRESH_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh: refreshToken }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.access) {
+          setPairTokens(data.access, data.refresh || refreshToken)
+          return true
+        }
+      }
+
+      clearTokens()
+      return false
+
+    } catch (error) {
+      console.error('Error refreshing token:', error)
+      clearTokens()
+      return false
+
+    } finally {
+      isRefreshing = false
+      refreshPromise = null
+    }
+  })()
+
+  return refreshPromise
+}
+
+const apiHeaders = (
+  method: string = "GET",
+  body: object | null = null
+) => {
+  return {
+    method,
+    ...(body && { body: JSON.stringify(body) }),
+  }
+}
+
 export const api = {
-  get: (endpoint: string) => 
-    request(endpoint, { method: "GET" }),
+  get: (endpoint: string, ignoreAuth: boolean = false) => 
+    request(endpoint, apiHeaders(), ignoreAuth),
 
-  post: (endpoint: string, body: object) =>
-    request(endpoint, { method: "POST", body: JSON.stringify(body) }),
+  post: (endpoint: string, body: object, ignoreAuth: boolean = false) =>
+    request(endpoint, apiHeaders("POST", body), ignoreAuth),
 
-  put: (endpoint: string, body: object) =>
-    request(endpoint, { method: "PUT", body: JSON.stringify(body) }),
+  put: (endpoint: string, body: object, ignoreAuth: boolean = false ) =>
+    request(endpoint, apiHeaders("PUT", body), ignoreAuth),
 
-  patch: (endpoint: string, body: object) =>
-    request(endpoint, { method: "PATCH", body: JSON.stringify(body) }),
+  patch: (endpoint: string, body: object, ignoreAuth: boolean = false) =>
+    request(endpoint, apiHeaders("PATCH", body), ignoreAuth),
 
-  delete: (endpoint: string) => 
-    request(endpoint, { method: "DELETE" }),
+  delete: (endpoint: string, ignoreAuth: boolean = false) => 
+    request(endpoint, apiHeaders("DELETE"), ignoreAuth),
 }

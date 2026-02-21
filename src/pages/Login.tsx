@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom"
 import useApi from "../hooks/useApi"
 import { authService } from "../services/nexotic"
 import { setPairTokens } from "../utils/setters"
+import { useAuth } from "../context/Auth"
 
 import { rawRoutes } from "../routes"
 
@@ -35,6 +36,7 @@ const validate = (data: expectedData) => {
 
 export default function Login() {
   const { data, error, execute } = useApi<any>()
+  const { checkAuth } = useAuth()
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(false)
@@ -42,9 +44,11 @@ export default function Login() {
   useEffect(() => {
     if (data && data.access && data.refresh) {
       setPairTokens(data.access, data.refresh)
+      checkAuth()
       navigate(rawRoutes.common.home)
     }
     if (error) {
+      console.error(error)
       alert("Error iniciando sesión: " + error)
     }
   }, [data, error])
