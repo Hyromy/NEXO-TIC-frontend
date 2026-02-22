@@ -3,14 +3,16 @@ type BreadcrumbProps = {
     label: string
     href: string
   }>
+  divider?: string
 }
 export function Breadcrumb({
-  items
+  items,
+  divider = "/",
 }: BreadcrumbProps) {
   const lastIndex = items.length - 1
   
   return (
-    <nav aria-label="breadcrumb">
+    <nav aria-label="breadcrumb" style={divider != null ? { "--bs-breadcrumb-divider": `'${divider}'` } as React.CSSProperties : undefined}>
       <ol className="breadcrumb">
         {items.map((item, index) => {
           const isLast = index == lastIndex

@@ -1,17 +1,37 @@
 import { type ReactNode } from "react"
 
+import { Offcanvas } from "bootstrap"
+
+type placement = "start" | "end" | "top" | "bottom"
+
 type CanvasProps = {
-  id?: string
+  id: string
   title: string
   children?: ReactNode
+  isStatic?: boolean
+  scrolling?: boolean
+  notBackdrop?: boolean
+  placement?: placement
 }
 export function Canvas({
-  id = "canvas",
+  id,
   title,
-  children
+  children,
+  isStatic,
+  scrolling,
+  notBackdrop,
+  placement = "start"
 }: CanvasProps) {
   return (
-    <div className="offcanvas offcanvas-start" tabIndex={-1} id={id} aria-labelledby={`${id}Label`}>
+    <div 
+      className={`offcanvas offcanvas-${placement}`}
+      tabIndex={-1}
+      id={id}
+      aria-labelledby={`${id}Label`}
+      {...(isStatic && { "data-bs-backdrop": "static", "data-bs-keyboard": "false" })}
+      {...(scrolling && { "data-bs-scroll": "true" })}
+      {...(notBackdrop && { "data-bs-backdrop": "false" })}
+    >
       <div className="offcanvas-header">
         <h5 className="offcanvas-title" id={`${id}Label`}>
           {title}
@@ -24,3 +44,18 @@ export function Canvas({
     </div>
   )
 }
+
+export function openCanvas(id: string) {
+  const canvas = document.getElementById(id)
+  if (canvas) {
+    Offcanvas.getOrCreateInstance(canvas).show()
+  }
+}
+
+export function closeCanvas(id: string) {
+  const canvas = document.getElementById(id)
+  if (canvas) {
+    Offcanvas.getOrCreateInstance(canvas).hide()
+  }
+}
+
