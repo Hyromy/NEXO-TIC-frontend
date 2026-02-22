@@ -1,4 +1,4 @@
-import { type ReactNode, isValidElement, cloneElement } from "react"
+import { type ReactNode, isValidElement, cloneElement, Children } from "react"
 
 import { type variants } from "./variants"
 
@@ -48,14 +48,11 @@ type ProgressStackProps = {
 export function ProgressStack({ children }: ProgressStackProps) {
   return (
     <div className="progress-stacked">
-      {Array.isArray(children)
-        ? children.map((child, index) =>
-            isValidElement(child) && child.type === Progress
-              ? cloneElement(child as React.ReactElement<ProgressProps>, { key: index, _stacked: true })
-              : child
-          )
-        : children
-      }
+      {Children.map(children, (child, index) =>
+        isValidElement(child) && child.type == Progress
+          ? cloneElement(child as React.ReactElement<ProgressProps>, { key: index, _stacked: true })
+          : child
+      )}
     </div>
   )
 }
