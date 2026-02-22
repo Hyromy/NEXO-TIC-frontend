@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { getDataFromForm, getHumanName } from "../utils/getters"
+import { getDataFromForm, getHumanName, getTheme } from "../utils/getters"
+import { setTheme } from "../utils/setters"
 import * as validator from "../utils/validator"
 
 describe("Utils package", () => {
@@ -100,6 +101,46 @@ describe("Utils package", () => {
 
         const humanName = getHumanName()
         expect(humanName).toBe('Mary JaneWatson')
+      })
+    })
+
+    describe('getTheme', () => {
+      it('should return null when no theme is stored', () => {
+        expect(getTheme()).toBeNull()
+      })
+
+      it('should return dark when stored as dark', () => {
+        localStorage.setItem('theme', 'dark')
+        expect(getTheme()).toBe('dark')
+      })
+
+      it('should return light when stored as light', () => {
+        localStorage.setItem('theme', 'light')
+        expect(getTheme()).toBe('light')
+      })
+    })
+  })
+
+  describe('setters.ts', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    describe('setTheme', () => {
+      it('should store dark theme in localStorage', () => {
+        setTheme('dark')
+        expect(localStorage.getItem('theme')).toBe('dark')
+      })
+
+      it('should store light theme in localStorage', () => {
+        setTheme('light')
+        expect(localStorage.getItem('theme')).toBe('light')
+      })
+
+      it('should overwrite existing theme', () => {
+        setTheme('dark')
+        setTheme('light')
+        expect(localStorage.getItem('theme')).toBe('light')
       })
     })
   })

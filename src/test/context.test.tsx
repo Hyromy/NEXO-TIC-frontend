@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { BrowserRouter } from "react-router-dom"
 import { AuthProvider, useAuth, ProtectedRoute } from "../context/Auth"
+import { ThemeProvider, useTheme } from "../context/Theme"
 
 // Mock dependencies
 vi.mock("../hooks/useApi")
@@ -26,8 +27,8 @@ vi.mock("react-router-dom", async () => {
 import useApi from "../hooks/useApi"
 import useUser from "../hooks/useUser"
 import { authService } from "../services/nexotic"
-import { clearTokens } from "../utils/setters"
-import { getRefreshToken, getPairTokens } from "../utils/getters"
+import { clearTokens, setTheme } from "../utils/setters"
+import { getRefreshToken, getPairTokens, getTheme } from "../utils/getters"
 import { isTokenExpired } from "../utils/jwt"
 
 describe("Context package", () => {
@@ -427,7 +428,6 @@ describe("Context package", () => {
           const { isAuthenticated } = useAuth()
           return <div>Consumer1: {String(isAuthenticated)}</div>
         }
-
         const Consumer2 = () => {
           const { isAuthenticated, logout } = useAuth()
           return (
@@ -437,9 +437,7 @@ describe("Context package", () => {
             </div>
           )
         }
-
         mockExecute.mockResolvedValue({ ok: true })
-
         const user = userEvent.setup()
         render(
           <AuthProvider>
@@ -447,14 +445,11 @@ describe("Context package", () => {
             <Consumer2 />
           </AuthProvider>,
         )
-
         await waitFor(() => {
           expect(screen.getByText("Consumer1: true")).toBeInTheDocument()
           expect(screen.getByText("Consumer2: true")).toBeInTheDocument()
         })
-
         await user.click(screen.getByRole("button"))
-
         await waitFor(() => {
           expect(screen.getByText("Consumer1: false")).toBeInTheDocument()
           expect(screen.getByText("Consumer2: false")).toBeInTheDocument()
@@ -463,28 +458,270 @@ describe("Context package", () => {
 
       it("should handle multiple logout calls gracefully", async () => {
         mockExecute.mockResolvedValue({ ok: true })
-
         const TestComponent = () => {
           const { logout } = useAuth()
           return <button onClick={logout}>Logout</button>
         }
-
         const user = userEvent.setup()
         render(
           <AuthProvider>
             <TestComponent />
           </AuthProvider>,
         )
-
         const button = screen.getByRole("button")
-
         await user.click(button)
         await user.click(button)
         await user.click(button)
-
         await waitFor(() => {
           expect(mockExecute).toHaveBeenCalledTimes(3)
         })
+      })
+    })
+  })
+
+  describe("Theme Context", () => {
+    beforeEach(() => {
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: vi.fn().mockImplementation((query: string) => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })),
+      })
+
+      vi.mocked(getTheme).mockReturnValue(null)
+      vi.mocked(setTheme).mockImplementation(() => {})
+      document.body.removeAttribute('data-bs-theme')
+    })
+
+    afterEach(() => {
+      vi.clearAllMocks()
+    })
+
+    describe("ThemeProvider", () => {
+      it("should provide theme context to children", () => {
+        const TestComponent = () => {
+          const { theme } = useTheme()
+          return <div>Theme: {theme}</div>
+        }
+
+        render(
+          <ThemeProvider>
+            <TestComponent />
+          </ThemeProvider>
+        )
+
+        expect(screen.getByText(/Theme:/)).toBeInTheDocument()
+      })
+
+      it("should use stored theme from localStorage", () => {
+        vi.mocked(getTheme).mockReturnValue('dark')
+
+        const TestComponent = () => {
+          const { theme } = useTheme()
+          return <div>Theme: {theme}</div>
+        }
+
+        render(
+          <ThemeProvider>
+            <TestComponent />
+          </ThemeProvider>
+        )
+
+        expect(screen.getByText("Theme: dark")).toBeInTheDocument()
+      })
+
+      it("should default to light when no stored theme and system prefers light", () => {
+        const TestComponent = () => {
+          const { theme } = useTheme()
+          return <div>Theme: {theme}</div>
+        }
+
+        render(
+          <ThemeProvider>
+            <TestComponent />
+          </ThemeProvider>
+        )
+
+        expect(screen.getByText("Theme: light")).toBeInTheDocument()
+      })
+
+      it("should default to dark when no stored theme and system prefers dark", () => {
+        Object.defineProperty(window, 'matchMedia', {
+          writable: true,
+          value: vi.fn().mockImplementation((query: string) => ({
+            matches: query === '(prefers-color-scheme: dark)',
+            media: query,
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+          })),
+        })
+
+        const TestComponent = () => {
+          const { theme } = useTheme()
+          return <div>Theme: {theme}</div>
+        }
+
+        render(
+          <ThemeProvider>
+            <TestComponent />
+          </ThemeProvider>
+        )
+
+        expect(screen.getByText("Theme: dark")).toBeInTheDocument()
+      })
+
+      it("should set data-bs-theme attribute on body", async () => {
+        vi.mocked(getTheme).mockReturnValue('dark')
+
+        render(
+          <ThemeProvider>
+            <div>test</div>
+          </ThemeProvider>
+        )
+
+        await waitFor(() => {
+          expect(document.body.getAttribute('data-bs-theme')).toBe('dark')
+        })
+      })
+
+      it("should call setTheme util when theme changes", async () => {
+        const TestComponent = () => {
+          const { toggleTheme } = useTheme()
+          return <button onClick={toggleTheme}>Toggle</button>
+        }
+
+        const user = userEvent.setup()
+        render(
+          <ThemeProvider>
+            <TestComponent />
+          </ThemeProvider>
+        )
+
+        await user.click(screen.getByRole("button"))
+
+        await waitFor(() => {
+          expect(setTheme).toHaveBeenCalledWith('dark')
+        })
+      })
+    })
+
+    describe("toggleTheme", () => {
+      it("should toggle from light to dark", async () => {
+        vi.mocked(getTheme).mockReturnValue('light')
+
+        const TestComponent = () => {
+          const { theme, toggleTheme } = useTheme()
+          return (
+            <div>
+              <div>Theme: {theme}</div>
+              <button onClick={toggleTheme}>Toggle</button>
+            </div>
+          )
+        }
+
+        const user = userEvent.setup()
+        render(
+          <ThemeProvider>
+            <TestComponent />
+          </ThemeProvider>
+        )
+
+        expect(screen.getByText("Theme: light")).toBeInTheDocument()
+        await user.click(screen.getByRole("button"))
+
+        await waitFor(() => {
+          expect(screen.getByText("Theme: dark")).toBeInTheDocument()
+        })
+      })
+
+      it("should toggle from dark to light", async () => {
+        vi.mocked(getTheme).mockReturnValue('dark')
+
+        const TestComponent = () => {
+          const { theme, toggleTheme } = useTheme()
+          return (
+            <div>
+              <div>Theme: {theme}</div>
+              <button onClick={toggleTheme}>Toggle</button>
+            </div>
+          )
+        }
+
+        const user = userEvent.setup()
+        render(
+          <ThemeProvider>
+            <TestComponent />
+          </ThemeProvider>
+        )
+
+        expect(screen.getByText("Theme: dark")).toBeInTheDocument()
+        await user.click(screen.getByRole("button"))
+
+        await waitFor(() => {
+          expect(screen.getByText("Theme: light")).toBeInTheDocument()
+        })
+      })
+
+      it("should update all consumers when theme toggles", async () => {
+        const Consumer1 = () => {
+          const { theme } = useTheme()
+          return <div>C1: {theme}</div>
+        }
+        const Consumer2 = () => {
+          const { theme, toggleTheme } = useTheme()
+          return (
+            <div>
+              <div>C2: {theme}</div>
+              <button onClick={toggleTheme}>Toggle</button>
+            </div>
+          )
+        }
+
+        const user = userEvent.setup()
+        render(
+          <ThemeProvider>
+            <Consumer1 />
+            <Consumer2 />
+          </ThemeProvider>
+        )
+
+        expect(screen.getByText("C1: light")).toBeInTheDocument()
+        expect(screen.getByText("C2: light")).toBeInTheDocument()
+
+        await user.click(screen.getByRole("button"))
+
+        await waitFor(() => {
+          expect(screen.getByText("C1: dark")).toBeInTheDocument()
+          expect(screen.getByText("C2: dark")).toBeInTheDocument()
+        })
+      })
+    })
+
+    describe("useTheme hook", () => {
+      it("should throw error when used outside ThemeProvider", () => {
+        const TestComponent = () => {
+          useTheme()
+          return <div>Test</div>
+        }
+
+        const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+
+        expect(() => render(<TestComponent />)).toThrow(
+          "useTheme must be used within a ThemeProvider"
+        )
+
+        consoleError.mockRestore()
       })
     })
   })
