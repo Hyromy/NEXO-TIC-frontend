@@ -8,6 +8,8 @@ import { useAuth } from "../context/Auth"
 import { Dropdown } from "../components/Dropdown"
 import { Button } from "../components/Button"
 
+import { useTheme } from "../context/Theme"
+
 type NavbarGroupProps = {
   children?: ReactNode
   gap?: number
@@ -25,6 +27,8 @@ function NavbarGroup({
 
 export default function Navbar() {
   const { logout, checkAuth } = useAuth()
+  const { toggleTheme, theme } = useTheme()
+
 
   const changePasswordHandler = () => {
     alert("Cambiar contraseña")
@@ -62,10 +66,13 @@ export default function Navbar() {
         </button>
         <NavbarGroup />
         <NavbarGroup>
-          <Dropdown items={dropdownItems} variant="light" inverted>
+          <Dropdown items={dropdownItems} variant={theme} inverted>
             <i className="bi bi-person-circle me-2"></i>
             Hola {getHumanName()}
           </Dropdown>
+          <Button onClick={toggleTheme} variant={theme}>
+            <i className={`bi bi-${theme == "dark" ? "moon-stars" : "sun"}-fill`}></i>
+          </Button>
         </NavbarGroup>
       </div>
     </nav>
