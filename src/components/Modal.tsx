@@ -1,20 +1,33 @@
 import { type ReactNode } from "react"
 
+import { Modal as BSModal } from "bootstrap"
+
 type ModalProps = {
   id?: string
   header?: ReactNode
   children: ReactNode,
   footer?: ReactNode
+  isStatic?: boolean
+  size?: "sm" | "lg" | "xl"
 } 
 export function Modal({
   id = "modal",
   header,
   children,
-  footer
+  footer,
+  isStatic,
+  size
 }: ModalProps) {
   return (
-    <div className="modal fade" id={id} tabIndex={-1} aria-labelledby={id + "Label"} aria-hidden="true">
-      <div className="modal-dialog">
+    <div 
+      className="modal fade"
+      id={id}
+      tabIndex={-1}
+      aria-labelledby={id + "Label"}
+      aria-hidden="true"
+      {...(isStatic && { "data-bs-backdrop": "static", "data-bs-keyboard": "false" })}
+    >
+      <div className={`modal-dialog${size ? " modal-" + size : ""}`}>
         <div className="modal-content">
           <div className="modal-header">
             {header && header}
@@ -34,4 +47,18 @@ export function Modal({
       </div>
     </div>
   )
+}
+
+export function openModal(id: string) {
+  const modalElement = document.getElementById(id)
+  if (modalElement) {
+    BSModal.getOrCreateInstance(modalElement).show()
+  }
+}
+
+export function closeModal(id: string) {
+  const modalElement = document.getElementById(id)
+  if (modalElement) {
+    BSModal.getOrCreateInstance(modalElement).hide()
+  }
 }
