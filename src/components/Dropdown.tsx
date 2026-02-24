@@ -10,6 +10,7 @@ type DropdownProps = {
   items: ReactNode[]
   direction?: directions
   inverted?: boolean
+  size?: "sm" | "lg"
 }
 export function Dropdown({
   variant = "primary",
@@ -17,10 +18,11 @@ export function Dropdown({
   items,
   direction,
   inverted,
+  size,
 }: DropdownProps) {
   return (
     <div className={`dropdown ${direction ? `drop${direction}` : ''}`}>
-      <button className={"btn btn-" + variant + " dropdown-toggle"} type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <button className={"btn btn-" + variant + " dropdown-toggle" + (size ? ` btn-${size}` : "")} type="button" data-bs-toggle="dropdown" aria-expanded="false">
         {children}
       </button>
       <ul className={`dropdown-menu ${inverted ? "dropdown-menu-end" : ""}`}>
