@@ -60,4 +60,10 @@ export const authService = {
       refresh,
     })
   ),
+
+  changePassword: (new_password: string) => (
+    api.post(authService.endpoint + "reset-password/", {
+      new_password,
+    })
+  ),
 }

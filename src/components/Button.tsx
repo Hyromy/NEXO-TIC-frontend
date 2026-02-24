@@ -3,6 +3,7 @@ import { type ReactNode } from "react"
 import { type variants } from "./variants"
 
 type buttonTypes = "button" | "submit" | "reset"
+type size = "sm" | "lg"
 
 type ButtonProps = {
   children: ReactNode
@@ -10,6 +11,9 @@ type ButtonProps = {
   variant?: variants
   fat?: boolean
   isLoading?: boolean
+  position?: "relative"
+  outLine?: boolean
+  size?: size
   onClick?: () => void
 }
 export function Button({
@@ -18,10 +22,19 @@ export function Button({
   variant = "primary",
   fat,
   isLoading,
+  position,
+  outLine,
+  size,
   onClick,
 }: ButtonProps) {
+  let classes = `btn btn-${outLine ? "outline-" : ""}${variant}`
+  if (fat) classes += " w-100"
+  if (isLoading) classes += " disabled"
+  if (position) classes += ` position-${position}`
+  if (size) classes += ` btn-${size}`
+
   return (
-    <button type={type} className={"btn btn-" + variant + (fat ? " w-100" : "") + (isLoading ? " disabled" : "")} onClick={onClick}>
+    <button type={type} className={classes} onClick={onClick}>
       {children}
     </button>
   )
@@ -29,12 +42,19 @@ export function Button({
 
 type ButtonGroupProps = {
   children: ReactNode
+  size?: size
+  vertical?: boolean
 }
 export function ButtonGroup({
-  children
+  children,
+  size,
+  vertical,
 }: ButtonGroupProps) {
+  let classes = `btn-group${vertical ? "-vertical" : ""}`
+  if (size) classes += ` btn-group-${size}`
+
   return (
-    <div className="btn-group" role="group">
+    <div className={classes} role="group">
       {children}
     </div>
   )
