@@ -13,6 +13,8 @@ import { useNavigate } from "react-router-dom"
 import useUser from "../hooks/useUser"
 import { Spinner } from "../components/Spinner"
 
+import { useTheme } from "../context/Theme"
+
 type MainProps = {
   children: ReactNode
 }
@@ -21,6 +23,7 @@ export default function Main({
 }: MainProps) {
   const navigate = useNavigate()
   const { loading, userType } = useUser()
+  const { theme } = useTheme()
 
   const routeAvaiability = (route: typeof protectedRoutes[0]) => (
     route.allowedFor!.includes("all") || route.allowedFor!.includes(userType!)
@@ -43,7 +46,7 @@ export default function Main({
       modules={protectedRoutes.filter(moduleFilter).map((module, index) => (
         <Button 
           key={index}
-          variant={currentPath.includes(module.path!) ? "primary" : "light"}
+          variant={currentPath.includes(module.path!) ? "primary" : theme}
           fat
           onClick={() => navigate(module.path!)}
         >
@@ -54,7 +57,7 @@ export default function Main({
       bottom={protectedRoutes.filter(infoFilter).map((module, index) => (
         <Button
           key={index}
-          variant={currentPath.includes(module.path!) ? "primary" : "light"}
+          variant={currentPath.includes(module.path!) ? "primary" : theme}
           fat
           onClick={() => navigate(module.path!)}
         >
@@ -69,7 +72,7 @@ export default function Main({
     <div className="d-flex flex-column min-vh-100">
       <div className="flex-grow-1 d-flex">
         <aside
-          className="bg-light border-end p-3 position-sticky d-none d-md-block"
+          className={`bg-${theme} border-end p-3 position-sticky d-none d-md-block`}
           style={{ minWidth: 220, top: 0, height: '100vh', zIndex: 1020 }}
         >
           {menu}

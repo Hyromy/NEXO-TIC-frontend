@@ -24,7 +24,7 @@ export default function Menu({
         {modules?.map((module, index) => (
           <li key={index}>{module}</li>
         ))}
-        <div className="mt-auto">
+        <div className="mt-auto d-flex flex-column gap-2">
           {bottom?.map((item, index) => (
             <li key={index + modulesCount}>{item}</li>
           ))}

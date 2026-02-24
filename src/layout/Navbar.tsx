@@ -14,6 +14,8 @@ import { Spinner } from "../components/Spinner"
 import useApi from "../hooks/useApi"
 import { authService } from "../services/nexotic"
 
+import { useTheme } from "../context/Theme"
+
 type NavbarGroupProps = {
   children?: ReactNode
   gap?: number
@@ -31,6 +33,8 @@ function NavbarGroup({
 
 export default function Navbar() {
   const { logout, checkAuth } = useAuth()
+  const { toggleTheme, theme } = useTheme()
+
 
   const logoutHandler = () => {
     const confirmation = confirm("¿Estás seguro que quieres cerrar sesión?")

@@ -39,3 +39,7 @@ export function getHumanName() {
     ? `${firstName}${lastName ?? ""}`
     : userName
 }
+
+export function getTheme() {
+  return localStorage.getItem("theme")
+}

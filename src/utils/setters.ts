@@ -7,3 +7,7 @@ export function clearTokens() {
   localStorage.removeItem("accessToken")
   localStorage.removeItem("refreshToken")
 }
+
+export function setTheme(theme: string) {
+  localStorage.setItem("theme", theme)
+}
