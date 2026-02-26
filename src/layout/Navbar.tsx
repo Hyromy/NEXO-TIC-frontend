@@ -79,10 +79,13 @@ export default function Navbar() {
           </button>
           <NavbarGroup />
           <NavbarGroup>
-            <Dropdown items={dropdownItems} variant="light" inverted>
+            <Dropdown items={dropdownItems} variant={theme == "dark" ? "dark" : "light"} inverted>
               <i className="bi bi-person-circle me-2"></i>
               Hola {getHumanName()}
             </Dropdown>
+            <Button onClick={toggleTheme} variant={theme}>
+              <i className={`bi bi-${theme == "dark" ? "moon-stars" : "sun"}-fill`}></i>
+            </Button>
           </NavbarGroup>
         </div>
       </nav>
