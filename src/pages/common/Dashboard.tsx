@@ -14,9 +14,11 @@ import {
 import type { ReactNode } from "react"
 
 import { type icons, type variants } from "../../components/variants"
+import { getHumanName } from "../../utils/getters"
 
 const defaultHeight = 192
 const defaultPadding = 2
+const defaultGap = 3
 
 export default function Dashboard() {
   const { canAccessEmployee, canAccessRRHH } = useUser()
@@ -34,10 +36,7 @@ export default function Dashboard() {
   )
 }
 
-type HolidaysCardProps = {
-  days: number
-}
-function DaysForHolidays({days}: HolidaysCardProps) {
+function DaysForHolidays({days}: {days: number}) {
   return (
     <Card header="Dias de vacaciones disponibles" padding={defaultPadding}>
       <StackContainer center height={defaultHeight}>
@@ -48,18 +47,26 @@ function DaysForHolidays({days}: HolidaysCardProps) {
 }
 
 type ItemsCardViewProps = {
-  items: string[]
+  forceNumber?: number
+  items?: string[]
   height?: number
 }
 function PendingRequests({
+  forceNumber,
   items,
   height = defaultHeight,
 }: ItemsCardViewProps) {
-  const content = items.length > 0
-    ? <List items={items} flush />
-    : <StackContainer center height={defaultHeight}>
-        No hay solicitudes pendientes
-      </StackContainer>
+  const container = (content: ReactNode) => (
+    <StackContainer center height={defaultHeight}>
+      {content}
+    </StackContainer>
+  )
+
+  const content = forceNumber != null
+    ? container(<h2>{forceNumber}</h2>)
+    : items && items.length > 0
+      ? <List items={items} flush />
+      : container("No hay solicitudes pendientes")
 
   return (
     <Card header="Solicitudes pendientes" padding={defaultPadding}>
@@ -89,7 +96,7 @@ function Notices({
         {item.children}
       </Alert>)
     )
-    : <StackContainer center height={defaultHeight}>
+    : <StackContainer center height={height}>
         No hay avisos o informes
       </StackContainer>
 
@@ -103,29 +110,38 @@ function Notices({
 }
 
 type IncidentsProps = {
-  items: IndicentObject[]
+  forceNumber?: number
+  items?: IndicentObject[]
   height?: number
 }
 function Incidents({
+  forceNumber,
   items,
   height = defaultHeight,
 }: IncidentsProps) {
+  const container = (content: ReactNode) => (
+    <StackContainer center height={defaultHeight}>
+      {content}
+    </StackContainer>
+  )
+
+  const content = forceNumber != null
+    ? container(<h2>{forceNumber}</h2>)
+    : items && items.length > 0
+      ? <List
+          items={items.map(item => (
+            <StackContainer >
+              {item.title} - {item.date}
+            </StackContainer>
+          ))}
+          flush
+        />
+      : container("No hay incidencias pendientes")
+
   return (
     <Card header="Incidencias pendientes" padding={defaultPadding}>
       <ScrollableContainer height={height} forceHeight>
-        {items.length > 0
-          ? <List
-              items={items.map(item => (
-                <StackContainer >
-                  {item.title} - {item.date}
-                </StackContainer>
-              ))}
-              flush
-            />
-          : <StackContainer center height={height}>
-              No hay incidencias pendientes
-            </StackContainer>
-        }
+        {content}
       </ScrollableContainer>
     </Card>
   )
@@ -136,6 +152,7 @@ type IndicentObject = {
   date: string
 }
 function EmployeeDashboard() {
+  const pendingHolidays = 4
   const pendingRequests = [
     "Solicitud de permiso 1",
     "Solicitud de permiso 2",
@@ -152,7 +169,7 @@ function EmployeeDashboard() {
 
   return (
     <__EmployeeLayout
-      first={<DaysForHolidays days={4} />}
+      first={<DaysForHolidays days={pendingHolidays} />}
       second={<PendingRequests items={pendingRequests} />}
       tall={<Notices items={notices} />}
       fat={<Incidents items={incidents} />}
@@ -172,28 +189,26 @@ function __EmployeeLayout({
   tall,
   fat,
 }: EmployeeLayoutProps) {
-  const gap = 3
-
   return (
-    <RowContainer gap={gap}>
-      <ColContainer defaultSize={8} sm={12} lg={8}>
-        <StackContainer gap={gap}>
-          <RowContainer gap={gap}>
-            <ColContainer sm={12} lg={6}>
+    <RowContainer gap={defaultGap}>
+      <ColContainer defaultSize={12} lg={8}>
+        <StackContainer gap={defaultGap}>
+          <RowContainer gap={defaultGap}>
+            <ColContainer defaultSize={12} lg={6}>
               {first}
             </ColContainer>
-            <ColContainer sm={12} lg={6}>
+            <ColContainer defaultSize={12} lg={6}>
               {second}
             </ColContainer>
           </RowContainer>
-          <RowContainer gap={gap}>
+          <RowContainer gap={defaultGap}>
             <ColContainer defaultSize={12}>
               {fat}
             </ColContainer>
           </RowContainer>
         </StackContainer>
       </ColContainer>
-      <ColContainer defaultSize={4} sm={12} lg={4}>
+      <ColContainer defaultSize={12} lg={4}>
         {tall}
       </ColContainer>
     </RowContainer>
@@ -201,13 +216,57 @@ function __EmployeeLayout({
 }
 
 function RRHHDashboard() {
+  const pendingRequests = 16
+  const pendingIncidents = 27
+  const daysForHolidays = 4
+  const notices: AlertObject[] = [
+    { icon: "info", children: "Información importante", variant: "info" },
+    { icon: "warning", children: "Advertencia", variant: "warning" },
+    { icon: "warning", children: "Advertencia", variant: "warning" },
+  ]
+
   return (
-    <__RRHHLayout />
+    <__RRHHLayout
+      first={<PendingRequests forceNumber={pendingRequests} />}
+      second={<Incidents forceNumber={pendingIncidents} />}
+      third={<DaysForHolidays days={daysForHolidays} />}
+      fat={<Notices items={notices} />}
+    />
   )
 }
 
-function __RRHHLayout() {
+type RRHHLayoutProps = {
+  first: ReactNode
+  second: ReactNode
+  third: ReactNode
+  fat: ReactNode
+}
+function __RRHHLayout({
+  first,
+  second,
+  third,
+  fat,
+}: RRHHLayoutProps) {
   return (
-    <h1>RRHH Layout</h1>
+    <StackContainer gap={defaultGap}>
+      <h2>¡Hola, {getHumanName()}!👋</h2>
+      <h4>Aquí tiene un resumen de la actividad</h4>
+      <RowContainer gap={defaultGap}>
+        <ColContainer defaultSize={12} lg={4}>
+          {first}
+        </ColContainer>
+        <ColContainer defaultSize={12} lg={4}>
+          {second}
+        </ColContainer>
+        <ColContainer defaultSize={12} lg={4}>
+          {third}
+        </ColContainer>
+      </RowContainer>
+      <RowContainer gap={defaultGap}>
+        <ColContainer defaultSize={12}>
+          {fat}
+        </ColContainer>
+      </RowContainer>
+    </StackContainer>
   )
 }
