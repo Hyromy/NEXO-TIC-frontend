@@ -1,7 +1,6 @@
 import { 
   type ReactNode,
   useState,
-  isValidElement,
 } from "react"
 
 import { getDataFromForm } from "../utils/getters"
@@ -202,16 +201,19 @@ type OptionProps = {
   value: string
   text: string
   selected?: boolean
+  disabled?: boolean
 }
 export function Option({
   value,
   text,
-  selected
+  selected,
+  disabled,
 }: OptionProps) {
   return (
     <option
       value={value}
       selected={selected}
+      disabled={disabled}
     >
       {text}
     </option>
@@ -223,6 +225,7 @@ type SelectProps = {
   options: (OptionProps | ReactNode)[]
   size?: size
   window?: number
+  value?: string
   disabled?: boolean
   onChange?: (value: string) => void
 }
@@ -231,6 +234,7 @@ export function Select({
   options,
   size,
   window,
+  value,
   disabled,
   onChange
 }: SelectProps) {
@@ -238,15 +242,19 @@ export function Select({
     <select
       className={`form-select ${formSizes(size!)}`}
       name={name}
+      value={value}
       disabled={disabled}
       onChange={onChange ? (e) => onChange(e.target.value) : undefined}
       {...(window ? { size: window } : {})}
     >
-      {options.map((option, index) =>
-        isValidElement(option)
-          ? option
-          : <Option key={index} {...option as OptionProps} />
-      )}
+      {options.map((option, index) => {
+        if (typeof option == "object" && option != null && "props" in (option as any)) {
+          return option as ReactNode
+        }
+
+        const { value, ...rest } = option as OptionProps
+        return <Option key={ index} value={value} {...rest} />
+      })}
     </select>
   )
 }
