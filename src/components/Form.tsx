@@ -6,7 +6,7 @@ import {
 import { getDataFromForm } from "../utils/getters"
 
 type size = "sm" | "lg"
-type textType = "text" | "password"
+type textType = "text" | "password" | "area"
 type formLabelType = "label" | "check"
 
 const formSizes = (size: size) => {
@@ -65,6 +65,7 @@ export function Form({
 type TextFieldProps = {
   name: string
   type?: textType
+  rows?: number
   label?: string
   id?: string
   placeholder?: string
@@ -78,6 +79,7 @@ type TextFieldProps = {
 export function TextField({
   name,
   type = "text",
+  rows,
   label,
   id = `field-${name}`,
   placeholder,
@@ -88,24 +90,30 @@ export function TextField({
   readonly,
   onChange
 }: TextFieldProps) {
-  const inputContent = (
-    <input 
-      type={type}
-      name={name}
-      className={`form-control ${formSizes(size!)}`}
-      id={id}
-      placeholder={placeholder}
-      value={value}
-      disabled={disabled}
-      readOnly={readonly}
-      onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-    />
-  )
+  const rest = {
+    type,
+    name,
+    className: `form-control ${formSizes(size!)}`,
+    id,
+    placeholder,
+    value,
+    disabled,
+    readOnly: readonly,
+    onChange: onChange ? (e: any) => onChange(e.target.value) : undefined
+  }
+
+  const inputContent = () => {
+    if (type == "area") {
+      const { type, ...restWithoutType } = rest
+      return <textarea {...restWithoutType} rows={rows || 3} />
+    }
+    return <input {...rest} />
+  }
 
   return (
     <>
       {textFieldLabelContent(label!, id)}
-      {inputContent}
+      {inputContent()}
       {textFieldTextContent(text!, id)}
     </>
   )
