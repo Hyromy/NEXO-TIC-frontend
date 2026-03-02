@@ -1,7 +1,9 @@
+import type { ReactNode } from "react"
+
 type AccordionProps = {
   items: Array<{
-    header: string
-    body: string
+    header: ReactNode
+    body: ReactNode
   }>
   id?: string
   flush?: boolean
