@@ -4,6 +4,7 @@ import { type variants } from "./variants"
 
 type buttonTypes = "button" | "submit" | "reset"
 type size = "sm" | "lg"
+type padding = 0 | 1 | 2 | 3 | 4 | 5
 
 type ButtonProps = {
   children: ReactNode
@@ -14,6 +15,7 @@ type ButtonProps = {
   position?: "relative"
   outLine?: boolean
   size?: size
+  h_padding?: padding
   onClick?: () => void
 }
 export function Button({
@@ -25,6 +27,7 @@ export function Button({
   position,
   outLine,
   size,
+  h_padding,
   onClick,
 }: ButtonProps) {
   let classes = `btn btn-${outLine ? "outline-" : ""}${variant}`
@@ -32,6 +35,7 @@ export function Button({
   if (isLoading) classes += " disabled"
   if (position) classes += ` position-${position}`
   if (size) classes += ` btn-${size}`
+  if (h_padding != null) classes += ` px-${h_padding}`
 
   return (
     <button type={type} className={classes} onClick={onClick}>

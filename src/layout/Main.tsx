@@ -84,7 +84,7 @@ export default function Main({
               {menu}
             </Canvas>
           </div>
-          <main className="flex-grow-1 p-4">
+          <main className="p-4 container">
             {children}
           </main>
         </div>

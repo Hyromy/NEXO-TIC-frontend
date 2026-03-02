@@ -7,3 +7,9 @@ export type variants =
   "info" |
   "light" |
   "dark"
+
+export type icons = 
+  "success" |
+  "info" |
+  "warning" |
+  "error"

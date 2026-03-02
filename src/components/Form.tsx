@@ -1,13 +1,12 @@
 import { 
   type ReactNode,
   useState,
-  isValidElement,
 } from "react"
 
 import { getDataFromForm } from "../utils/getters"
 
 type size = "sm" | "lg"
-type textType = "text" | "password"
+type textType = "text" | "password" | "area"
 type formLabelType = "label" | "check"
 
 const formSizes = (size: size) => {
@@ -66,6 +65,7 @@ export function Form({
 type TextFieldProps = {
   name: string
   type?: textType
+  rows?: number
   label?: string
   id?: string
   placeholder?: string
@@ -79,6 +79,7 @@ type TextFieldProps = {
 export function TextField({
   name,
   type = "text",
+  rows,
   label,
   id = `field-${name}`,
   placeholder,
@@ -89,24 +90,30 @@ export function TextField({
   readonly,
   onChange
 }: TextFieldProps) {
-  const inputContent = (
-    <input 
-      type={type}
-      name={name}
-      className={`form-control ${formSizes(size!)}`}
-      id={id}
-      placeholder={placeholder}
-      value={value}
-      disabled={disabled}
-      readOnly={readonly}
-      onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-    />
-  )
+  const rest = {
+    type,
+    name,
+    className: `form-control ${formSizes(size!)}`,
+    id,
+    placeholder,
+    value,
+    disabled,
+    readOnly: readonly,
+    onChange: onChange ? (e: any) => onChange(e.target.value) : undefined
+  }
+
+  const inputContent = () => {
+    if (type == "area") {
+      const { type, ...restWithoutType } = rest
+      return <textarea {...restWithoutType} rows={rows || 3} />
+    }
+    return <input {...rest} />
+  }
 
   return (
     <>
       {textFieldLabelContent(label!, id)}
-      {inputContent}
+      {inputContent()}
       {textFieldTextContent(text!, id)}
     </>
   )
@@ -202,16 +209,19 @@ type OptionProps = {
   value: string
   text: string
   selected?: boolean
+  disabled?: boolean
 }
 export function Option({
   value,
   text,
-  selected
+  selected,
+  disabled,
 }: OptionProps) {
   return (
     <option
       value={value}
       selected={selected}
+      disabled={disabled}
     >
       {text}
     </option>
@@ -223,6 +233,7 @@ type SelectProps = {
   options: (OptionProps | ReactNode)[]
   size?: size
   window?: number
+  value?: string
   disabled?: boolean
   onChange?: (value: string) => void
 }
@@ -231,6 +242,7 @@ export function Select({
   options,
   size,
   window,
+  value,
   disabled,
   onChange
 }: SelectProps) {
@@ -238,15 +250,19 @@ export function Select({
     <select
       className={`form-select ${formSizes(size!)}`}
       name={name}
+      value={value}
       disabled={disabled}
       onChange={onChange ? (e) => onChange(e.target.value) : undefined}
       {...(window ? { size: window } : {})}
     >
-      {options.map((option, index) =>
-        isValidElement(option)
-          ? option
-          : <Option key={index} {...option as OptionProps} />
-      )}
+      {options.map((option, index) => {
+        if (typeof option == "object" && option != null && "props" in (option as any)) {
+          return option as ReactNode
+        }
+
+        const { value, ...rest } = option as OptionProps
+        return <Option key={ index} value={value} {...rest} />
+      })}
     </select>
   )
 }

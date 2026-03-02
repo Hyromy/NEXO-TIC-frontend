@@ -1,11 +1,9 @@
 import { type ReactNode, isValidElement } from "react"
 import { createRoot } from "react-dom/client"
 
-import { type variants } from "./variants"
+import { type variants, type icons } from "./variants"
 
-type icon = "success" | "info" | "warning" | "error"
-
-const icons: Record<icon, { className: string, label: string }> = {
+const _icons: Record<icons, { className: string, label: string }> = {
   success: { className: "bi bi-check-circle-fill", label: "Success:" },
   info:    { className: "bi bi-info-circle-fill",  label: "Info:" },
   warning: { className: "bi bi-exclamation-triangle-fill", label: "Warning:" },
@@ -16,7 +14,7 @@ type AlertProps = {
   children?: ReactNode
   type?: variants
   notDismissible?: boolean
-  icon?: icon
+  icon?: icons
 }
 export function Alert({
   children,
@@ -27,7 +25,7 @@ export function Alert({
   return (
     <div className={`alert alert-${type}${!notDismissible ? " alert-dismissible" : ""}${icon ? " d-flex align-items-center" : ""} fade show`} role="alert">
       {icon && (
-        <i className={`${icons[icon].className} flex-shrink-0 me-2`} role="img" aria-label={icons[icon].label}></i>
+        <i className={`${_icons[icon].className} flex-shrink-0 me-2`} role="img" aria-label={_icons[icon].label}></i>
       )}
       <div>{children}</div>
       {!notDismissible && (
