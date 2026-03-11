@@ -14,6 +14,7 @@ import useUser from "../hooks/useUser"
 import { Spinner } from "../components/Spinner"
 
 import { useTheme } from "../context/Theme"
+import { FloatContainer } from "./Containers"
 
 type MainProps = {
   children: ReactNode
@@ -90,6 +91,7 @@ export default function Main({
         </div>
       </div>
       <Foot />
+      <FloatContainer id="main-float-container" />
     </div>
   )
 }

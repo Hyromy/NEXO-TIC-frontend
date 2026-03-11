@@ -11,6 +11,8 @@ import { Modal, openModal, closeModal } from "../components/Modal"
 import { StackContainer } from "./Containers"
 import { Form, PasswordField } from "../components/Form"
 import { Spinner } from "../components/Spinner"
+import { Alert, launchAlert } from "../components/Alert"
+
 import useApi from "../hooks/useApi"
 import { authService } from "../services/nexotic"
 
@@ -114,7 +116,11 @@ function ThisModal({ id }: { id: string }) {
   useEffect(() => {
     if (data) {
       closeModal(id)
-      alert("Contraseña cambiada exitosamente")
+      launchAlert("main-float-container",
+        <Alert icon="success" type="success">
+          Contraseña cambiada exitosamente.
+        </Alert>,
+      )
     }
     if (error) {
       console.error(error)

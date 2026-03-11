@@ -3,15 +3,13 @@ import Main from "../../layout/Main"
 import { Button } from "../../components/Button"
 import { Table } from "../../components/Table"
 import { useState } from "react"
-import { ColContainer, FloatContainer, RowContainer, StackContainer } from "../../layout/Containers"
+import { ColContainer, RowContainer, StackContainer } from "../../layout/Containers"
 import { Form, TextField } from "../../components/Form"
 import { Card } from "../../components/Card"
 import { Alert, launchAlert } from "../../components/Alert"
 
 const defaultGap = 4
 const maxEvidences = 2
-
-const floatContainerId = "incident-float-container"
 
 type thisViewPort = "history" | "justify"
 
@@ -52,7 +50,6 @@ export default function Incidencias () {
   return (
     <Main>
       {render()}
-      <FloatContainer id={floatContainerId} />
     </Main>
   )
 }
@@ -161,20 +158,18 @@ function NewIncident({
     data.evidences = evidences
     const validationError = validate(data)
     if (validationError != "ok") {
-      launchAlert(floatContainerId,
+      launchAlert("main-float-container",
         <Alert type="warning" icon="warning">
           {validationError}
         </Alert>,
-        true
       )
       return
     }
 
-    launchAlert(floatContainerId,
+    launchAlert("main-float-container",
       <Alert type="success" icon="success">
         Incidencia justificada correctamente.
       </Alert>,
-      true
     )
     goBack()
   }

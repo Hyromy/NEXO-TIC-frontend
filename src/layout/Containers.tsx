@@ -113,7 +113,7 @@ export function FloatContainer({
   position = "bottom-right",
   padding = 2,
 }: FloatContainerProps) {
-  const style: React.CSSProperties = { position: "absolute" }
+  const style: React.CSSProperties = { position: "fixed" }
   
   if (position.includes("bottom")) style.bottom = 0
   if (position.includes("top")) style.top = 0

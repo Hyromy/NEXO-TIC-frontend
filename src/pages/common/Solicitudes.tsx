@@ -1,7 +1,7 @@
 import Main from "../../layout/Main"
 import Progress from "../../components/Progress"
 import { Button } from "../../components/Button"
-import { ColContainer, FloatContainer, RowContainer, StackContainer } from "../../layout/Containers"
+import { ColContainer, RowContainer, StackContainer } from "../../layout/Containers"
 import { useEffect, useState } from "react"
 import { Select, Option } from "../../components/Form"
 import { Card } from "../../components/Card"
@@ -13,8 +13,6 @@ const defaultHorizontalPadding = 5
 const defaultGap = 4
 const defaultMinStep = 0
 const defaultMaxStep = 2
-
-const floatContainerId = "request-float-container"
 
 const defaultState = {
   step: defaultMinStep,
@@ -120,11 +118,10 @@ export default function Solicitudes() {
                 h_padding={defaultHorizontalPadding}
                 onClick={() => {
                   if (isEnd) {
-                    launchAlert(floatContainerId,
+                    launchAlert("main-float-container",
                       <Alert type="success" icon="success">
                         Solicitud enviada correctamente.
                       </Alert>,
-                      true
                     )
                     setData(defaultState.data)
                     setCanContinue(defaultState.canContinue)
@@ -150,7 +147,6 @@ export default function Solicitudes() {
           max={defaultMaxStep}
         />
       </StackContainer>
-      <FloatContainer id={floatContainerId} />
     </Main>
   )
 }
