@@ -146,6 +146,25 @@ describe('Services package', () => {
           }
         })
       })
+
+      it('should not attempt token refresh on 401 when ignoreAuth is true', async () => {
+        const errorData = { message: 'Unauthorized' }
+        mockFetch.mockResolvedValue({
+          ok: false,
+          status: 401,
+          json: () => Promise.resolve(errorData)
+        })
+
+        const result = await request('http://test.com/api', {}, true)
+
+        expect(mockFetch).toHaveBeenCalledTimes(1)
+        expect(result).toEqual({
+          error: true,
+          status: 401,
+          message: 'Unauthorized',
+          originalError: errorData
+        })
+      })
     })
 
     describe('api object methods', () => {

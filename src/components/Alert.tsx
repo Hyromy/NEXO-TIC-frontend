@@ -1,5 +1,11 @@
-import { type ReactNode, isValidElement } from "react"
+import {
+  type ReactNode,
+  isValidElement,
+  useEffect,
+  useRef
+} from "react"
 import { createRoot } from "react-dom/client"
+import { Alert as BSAlert } from "bootstrap"
 
 import { type variants, type icons } from "./variants"
 
@@ -15,15 +21,28 @@ type AlertProps = {
   type?: variants
   notDismissible?: boolean
   icon?: icons
+  timeout?: number | false
 }
 export function Alert({
   children,
   type = "primary",
   notDismissible,
   icon,
+  timeout = 5000,
 }: AlertProps) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (timeout && ref.current) {
+      const timer = setTimeout(() => {
+        BSAlert.getOrCreateInstance(ref.current!).close()
+      }, timeout)
+      return () => clearTimeout(timer)
+    }
+  }, [timeout])
+
   return (
-    <div className={`alert alert-${type}${!notDismissible ? " alert-dismissible" : ""}${icon ? " d-flex align-items-center" : ""} fade show`} role="alert">
+    <div ref={ref} className={`alert alert-${type}${!notDismissible ? " alert-dismissible" : ""}${icon ? " d-flex align-items-center" : ""} fade show`} role="alert">
       {icon && (
         <i className={`${_icons[icon].className} flex-shrink-0 me-2`} role="img" aria-label={_icons[icon].label}></i>
       )}
@@ -50,11 +69,18 @@ export function AlertLink({
   )
 }
 
-export function launchAlert(containerId: string, alert: ReactNode) {
+export function launchAlert(
+  containerId: string,
+  alert: ReactNode,
+  clear: boolean = false,
+  limit: number = 5,
+) {
   const placeholder = document.getElementById(containerId)
-  if (!placeholder) throw new Error(`Container with ID "${containerId}" not found.`)
 
+  if (!placeholder) throw new Error(`Container with ID "${containerId}" not found.`)
   if (!(isValidElement(alert) && alert.type == Alert)) throw new Error("The alert must be a valid React element of type Alert.")
+  if (clear) placeholder.innerHTML = ""
+  if (limit <= placeholder.children.length) placeholder.removeChild(placeholder.firstElementChild!)
 
   const wrapper = document.createElement("div")
   placeholder.appendChild(wrapper)

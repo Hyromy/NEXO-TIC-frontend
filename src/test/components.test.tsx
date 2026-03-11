@@ -3,12 +3,13 @@ import { act } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-const { mockShow, mockHide, mockGetOrCreateInstance, mockDispose } = vi.hoisted(() => {
+const { mockShow, mockHide, mockClose, mockGetOrCreateInstance, mockDispose } = vi.hoisted(() => {
   const mockShow = vi.fn()
   const mockHide = vi.fn()
+  const mockClose = vi.fn()
   const mockDispose = vi.fn()
-  const mockGetOrCreateInstance = vi.fn(() => ({ show: mockShow, hide: mockHide }))
-  return { mockShow, mockHide, mockGetOrCreateInstance, mockDispose }
+  const mockGetOrCreateInstance = vi.fn(() => ({ show: mockShow, hide: mockHide, close: mockClose }))
+  return { mockShow, mockHide, mockClose, mockGetOrCreateInstance, mockDispose }
 })
 
 vi.mock('bootstrap', () => {
@@ -19,6 +20,7 @@ vi.mock('bootstrap', () => {
   }
   (MockClass as unknown as { getOrCreateInstance: typeof mockGetOrCreateInstance }).getOrCreateInstance = mockGetOrCreateInstance
   return {
+    Alert:   { getOrCreateInstance: mockGetOrCreateInstance },
     Modal:   { getOrCreateInstance: mockGetOrCreateInstance },
     Toast:   MockClass,
     Tooltip: MockClass,
@@ -162,6 +164,27 @@ describe("Components package", () => {
       rerender(<Alert icon="error">A</Alert>)
       expect(document.querySelector('.bi-x-circle-fill')).toBeInTheDocument()
     })
+
+    it('should call BSAlert.close after timeout', () => {
+      vi.useFakeTimers()
+      mockClose.mockClear()
+      mockGetOrCreateInstance.mockClear()
+      render(<Alert timeout={3000}>Alert</Alert>)
+      expect(mockClose).not.toHaveBeenCalled()
+      act(() => { vi.advanceTimersByTime(3000) })
+      expect(mockGetOrCreateInstance).toHaveBeenCalled()
+      expect(mockClose).toHaveBeenCalled()
+      vi.useRealTimers()
+    })
+
+    it('should not set auto-dismiss timer when timeout is false', () => {
+      vi.useFakeTimers()
+      mockClose.mockClear()
+      render(<Alert timeout={false}>Alert</Alert>)
+      act(() => { vi.advanceTimersByTime(99999) })
+      expect(mockClose).not.toHaveBeenCalled()
+      vi.useRealTimers()
+    })
   })
 
   describe('AlertLink Component', () => {
@@ -217,6 +240,30 @@ describe("Components package", () => {
         launchAlert('alert-container', <Alert>Hello</Alert>)
       })
       expect(container.children.length).toBeGreaterThan(0)
+    })
+
+    it('should clear container when clear is true', () => {
+      act(() => {
+        launchAlert('alert-container', <Alert>First</Alert>)
+        launchAlert('alert-container', <Alert>Second</Alert>)
+      })
+      expect(container.children.length).toBe(2)
+      act(() => {
+        launchAlert('alert-container', <Alert>Third</Alert>, true)
+      })
+      expect(container.children.length).toBe(1)
+    })
+
+    it('should remove oldest alert when limit is reached', () => {
+      act(() => {
+        launchAlert('alert-container', <Alert>A</Alert>, false, 2)
+        launchAlert('alert-container', <Alert>B</Alert>, false, 2)
+      })
+      expect(container.children.length).toBe(2)
+      act(() => {
+        launchAlert('alert-container', <Alert>C</Alert>, false, 2)
+      })
+      expect(container.children.length).toBe(2)
     })
   })
 

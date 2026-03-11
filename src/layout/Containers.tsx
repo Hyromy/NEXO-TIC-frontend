@@ -1,12 +1,12 @@
 import { type ReactNode } from "react"
 
 type BasicRange = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
-type gap = 0 | 1 | 2 | 3 | 4 | 5
+type ShortRange = 0 | 1 | 2 | 3 | 4 | 5
 
 type StackContainerProps = {
   children: ReactNode
   orientation?: "column" | "row"
-  gap?: gap
+  gap?: ShortRange
   center?: boolean
   height?: number
 }
@@ -29,7 +29,7 @@ export function StackContainer({
 
 type RowContainerProps = {
   children: ReactNode
-  gap?: gap
+  gap?: ShortRange
 }
 export function RowContainer({
   children,
@@ -94,6 +94,40 @@ export function ScrollableContainer({
 }: ScrollableContainerProps) {
   return (
     <div style={{ maxHeight: height, overflowY: "auto", height: forceHeight ? height : "auto" }}>
+      {children}
+    </div>
+  )
+}
+
+type FloatContainerProps = {
+  children?: ReactNode
+  id?: string
+  currentWith?: string | number
+  position?: "bottom-right" | "bottom-left" | "top-right" | "top-left"
+  padding?: ShortRange
+}
+export function FloatContainer({
+  children,
+  id,
+  currentWith = 384,
+  position = "bottom-right",
+  padding = 2,
+}: FloatContainerProps) {
+  const style: React.CSSProperties = { position: "absolute" }
+  
+  if (position.includes("bottom")) style.bottom = 0
+  if (position.includes("top")) style.top = 0
+  if (position.includes("right")) style.right = 0
+  if (position.includes("left")) style.left = 0
+
+  if (currentWith) style.width = currentWith
+
+  return (
+    <div
+      id={id}
+      className={`p-${padding}`}
+      style={style}
+    >
       {children}
     </div>
   )

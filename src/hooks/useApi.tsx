@@ -12,6 +12,8 @@ export default function useApi<T>() {
 		try {
 			const response = await apiCall
 			if (response.error) {
+				console.warn("API Error:", response)
+
 				throw new Error(
 					response.originalError.error
 					|| response.originalError.detail
