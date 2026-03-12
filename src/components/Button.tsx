@@ -6,7 +6,7 @@ type buttonTypes = "button" | "submit" | "reset"
 type size = "sm" | "lg"
 type padding = 0 | 1 | 2 | 3 | 4 | 5
 
-type ButtonProps = {
+export type ButtonProps = {
   children: ReactNode
   type?: buttonTypes
   variant?: variants
