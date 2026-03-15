@@ -171,6 +171,20 @@ describe("Utils package", () => {
       expect(validator.isEmail('user@domain')).toBe(false)
       expect(validator.isEmail('user@.com')).toBe(false)
     })
+
+    it('should return true for valid phone numbers', () => {
+      expect(validator.isPhone('1234567')).toBe(true)
+      expect(validator.isPhone('1234567890')).toBe(true)
+      expect(validator.isPhone('123456789012345')).toBe(true)
+    })
+
+    it('should return false for invalid phone numbers', () => {
+      expect(validator.isPhone('123456')).toBe(false)
+      expect(validator.isPhone('1234567890123456')).toBe(false)
+      expect(validator.isPhone('123-4567')).toBe(false)
+      expect(validator.isPhone('abc1234567')).toBe(false)
+      expect(validator.isPhone('')).toBe(false)
+    })
   })
 
   describe("parser.ts", () => {

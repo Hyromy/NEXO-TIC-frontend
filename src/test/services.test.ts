@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { request, api } from '../services/api'
-import { userService, authService } from '../services/nexotic'
+import { userService, authService, employeeService } from '../services/nexotic'
 
 describe('Services package', () => {
   describe('api.ts', () => {
@@ -368,6 +368,49 @@ describe('Services package', () => {
             method: 'POST',
             body: JSON.stringify({
               new_password: 'newSecurePass123'
+            })
+          })
+        )
+      })
+    })
+
+    describe('employeeService', () => {
+      it('should have correct endpoint', () => {
+        expect(employeeService.endpoint).toBe(API_URL + 'employees/')
+      })
+
+      it('should get all employees when no id provided', async () => {
+        await employeeService.get()
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'employees/',
+          expect.objectContaining({ method: 'GET' })
+        )
+      })
+
+      it('should create employee with expected payload', async () => {
+        await employeeService.create(
+          'John',
+          'Doe',
+          3,
+          'john.doe@nexotic.com',
+          '1234567890',
+          7
+        )
+
+        const today = new Date().toISOString().split('T')[0]
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'employees/',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+              join_date: today,
+              name: 'John',
+              last_name: 'Doe',
+              department: 3,
+              email: 'john.doe@nexotic.com',
+              phone: '1234567890',
+              job_position: 7
             })
           })
         )

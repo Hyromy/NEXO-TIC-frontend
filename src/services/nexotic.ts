@@ -102,6 +102,25 @@ export const employeeService = {
   get: (id: number = 0): Promise<employee | employee[]> => (
     api.get(employeeService.endpoint + param(id))
   ),
+
+  create: (
+    name: string,
+    last_name: string,
+    department: number,
+    email: string,
+    phone: string,
+    job_position: number
+  ) => (
+    api.post(employeeService.endpoint, {
+      join_date: new Date().toISOString().split("T")[0],
+      name,
+      last_name,
+      department,
+      email,
+      phone,
+      job_position,
+    })
+  ),
 }
 
 export type department = {

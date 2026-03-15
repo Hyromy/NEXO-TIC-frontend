@@ -13,8 +13,16 @@ import {
 import { Spinner } from "../../components/Spinner"
 import { parseEmployee, type EmployeeRecords } from "../../utils/parser"
 import { Button } from "../../components/Button"
-import { Modal, openModal } from "../../components/Modal"
-import { Form, TextField, Select, Option } from "../../components/Form"
+import { closeModal, Modal, openModal } from "../../components/Modal"
+import {
+  Form,
+  TextField,
+  Select,
+  Option,
+  GroupField,
+  GroupFieldText
+} from "../../components/Form"
+import { isEmail, isPhone } from "../../utils/validator"
 
 type viewType = 'table'
 
@@ -37,13 +45,17 @@ export default function Gestion_Empleados() {
     employee[]
   ]>()
 
-  useEffect(() => {
+  const getData = () => {
     execute(
       userService.get(),
       departmentService.get(),
       jobPositionService.get(),
       employeeService.get(),
     )
+  }
+
+  useEffect(() => {
+    getData()
   }, [])
 
   useEffect(() => {
@@ -65,7 +77,11 @@ export default function Gestion_Empleados() {
   const render = () => {
     switch (view) {
       case 'table':
-        return <TableView data={requestData} loading={loading} />
+        return <TableView
+          data={requestData}
+          loading={loading}
+          refreshData={getData}
+        />
       
       default:
         return <Navigate to="/" />
@@ -80,12 +96,14 @@ export default function Gestion_Empleados() {
 }
 
 type TableViewProps = {
-  data: allData| null
+  data: allData | null
   loading: boolean
+  refreshData: () => void
 }
 function TableView ({
   data,
   loading,
+  refreshData,
 }: TableViewProps) {
   const records: EmployeeRecords | null = data
     ? [data.users, data.departments, data.jobPositions, data.employees]
@@ -135,7 +153,11 @@ function TableView ({
           />
         )}
       </StackContainer>
-      <NewEmployeeModal id={addEmployeeModalId} data={data} />
+      <NewEmployeeModal
+        id={addEmployeeModalId}
+        data={data}
+        refreshData={refreshData}
+      />
     </>
   )
 }
@@ -145,38 +167,82 @@ type newEmployeeExpectedData = {
   last_name: string,
   department: string,
   job_position: string,
+  phone: string,
+  email: string,
 }
 
 type NewEmployeeModalProps = {
   id: string,
   data: allData | null
+  refreshData: () => void,
 }
 function NewEmployeeModal ({
   id,
-  data
+  data,
+  refreshData,
 }: NewEmployeeModalProps) {
   const [currentDepartment, setCurrentDepartment] = useState<number | null>(null)
   const [currentJobPosition, setCurrentJobPosition] = useState<string>("")
-  
-  const validate = (data: newEmployeeExpectedData): string | "ok" => {
-    const { name, last_name, department, job_position } = data
 
-    if (!name || !last_name || !department || !job_position) {
+  const { execute, loading, error, data: apiData } = useApi<any>()
+
+  const validate = (data: newEmployeeExpectedData): string | "ok" => {
+    const { name, last_name, department, job_position, phone, email } = data
+
+    if (
+      !name ||
+      !last_name ||
+      !department ||
+      !job_position ||
+      !phone ||
+      !email
+    ) {
       return "Todos los campos son obligatorios."
+    }
+
+    if (!isPhone(phone)) {
+      return "El número de teléfono no es válido. Debe contener entre 7 y 15 dígitos."
+    }
+
+    if (!isEmail(email + "@nexotic.com")) {
+      return "El correo electrónico no es válido."
     }
 
     return "ok"
   }
 
-  const onSubmit = (fd: newEmployeeExpectedData) => {
+  const onSubmit = async (fd: newEmployeeExpectedData) => {
     const validation = validate(fd)
     if (validation != "ok") {
-      alert(validation)
-      return
+      return alert(validation)
     }
 
-    alert("Formulario válido, datos listos para enviar: " + JSON.stringify(fd))
+    execute(
+      employeeService.create(
+        fd.name,
+        fd.last_name,
+        parseInt(fd.department, 10),
+        fd.email + "@nexotic.com",
+        fd.phone,
+        parseInt(fd.job_position, 10),
+      )
+    )
   }
+
+  useEffect(() => {
+    if (apiData as employee) {
+      console.log("Empleado creado:", apiData)
+
+      alert("Empleado registrado exitosamente. El empleado recibirá un correo para configurar su cuenta.")
+      refreshData()
+      closeModal(id)
+    }
+
+    if (error) {
+      alert('Error: ' + error)
+      console.error('Error:', error)
+    }
+  }, [apiData, error])
 
   const currentDepartmentValue = currentDepartment?.toString() || ""
 
@@ -217,6 +283,17 @@ function NewEmployeeModal ({
           </RowContainer>
           <RowContainer>
             <ColContainer defaultSize={12} lg={6}>
+              <GroupField label="Correo electrónico">
+                <TextField name="email"/>
+                <GroupFieldText text="@nexotic.com" />
+              </GroupField>
+            </ColContainer>
+            <ColContainer defaultSize={12} lg={6}>
+              <TextField name="phone" label="Número de teléfono" type="number"/>
+            </ColContainer>
+          </RowContainer>
+          <RowContainer>
+            <ColContainer defaultSize={12} lg={6}>
               <Select
                 name="department"
                 label="Departamento"
@@ -241,8 +318,12 @@ function NewEmployeeModal ({
             </ColContainer>
           </RowContainer>
           <StackContainer center>
-            <Button type="submit" h_padding={5}>
-              Registrar
+            <Button 
+              type="submit"
+              h_padding={5}
+              isLoading={loading}
+            >
+              { loading ? <Spinner small /> : "Registrar" }
             </Button>
           </StackContainer>
         </StackContainer>

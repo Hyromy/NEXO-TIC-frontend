@@ -6,7 +6,7 @@ import {
 import { getDataFromForm } from "../utils/getters"
 
 type size = "sm" | "lg"
-type textType = "text" | "password" | "area"
+type textType = "text" | "password" | "area" | "number"
 type formLabelType = "label" | "check"
 
 const formSizes = (size: size) => {
