@@ -231,6 +231,8 @@ export function Option({
 type SelectProps = {
   name: string
   options: (OptionProps | ReactNode)[]
+  label?: string
+  id?: string
   size?: size
   window?: number
   value?: string
@@ -240,13 +242,15 @@ type SelectProps = {
 export function Select({
   name,
   options,
+  label,
+  id = `select-${name}`,
   size,
   window,
   value,
   disabled,
   onChange
 }: SelectProps) {
-  return (
+  const selectContent = (
     <select
       className={`form-select ${formSizes(size!)}`}
       name={name}
@@ -264,6 +268,13 @@ export function Select({
         return <Option key={ index} value={value} {...rest} />
       })}
     </select>
+  )
+
+  return (
+    <>
+      {textFieldLabelContent(label!, id)}
+      {selectContent}
+    </>
   )
 }
 

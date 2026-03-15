@@ -5,20 +5,29 @@ export default function useApi<T>() {
 	const [loading, setLoading] = useState<boolean>(false)
 	const [error, setError] = useState<string | null>(null)
 
-  const execute = useCallback(async (apiCall: Promise<any>) => {
+  const execute = useCallback(async (...apiCalls: Promise<any>[]) => {
 		setLoading(true)
 		setError(null)
 
 		try {
-			const response = await apiCall
-			if (response.error) {
-				throw new Error(
-					response.originalError.error
-					|| response.originalError.detail
-				)
-			}
-			setData(response)
-			return response
+      const isSingle = apiCalls.length === 1
+      const results = isSingle 
+        ? await apiCalls[0] 
+        : await Promise.all(apiCalls)
+
+      if (isSingle) {
+        if (results.error) {
+          throw new Error(results.originalError?.error || results.originalError?.detail)
+        }
+      } else {
+        const errorInBatch = (results as any[]).find(r => r.error)
+        if (errorInBatch) {
+          throw new Error(errorInBatch.originalError?.error || errorInBatch.originalError?.detail)
+        }
+      }
+
+      setData(results)
+      return results
 		
 		} catch (err: any) {
 			setError(err.message || 'Ocurrió un error inesperado.')
