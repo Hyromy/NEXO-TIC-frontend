@@ -121,6 +121,25 @@ export const employeeService = {
       job_position,
     })
   ),
+
+  update: (
+    id: number,
+    name: string,
+    last_name: string,
+    department: number,
+    email: string,
+    phone: string,
+    job_position: number
+  ) => (
+    api.patch(employeeService.endpoint + param(id), {
+      name,
+      last_name,
+      department,
+      email,
+      phone,
+      job_position,
+    })
+  )
 }
 
 export type department = {

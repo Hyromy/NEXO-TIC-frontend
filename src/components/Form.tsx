@@ -40,6 +40,69 @@ type FormProps = {
   children: ReactNode
   onSubmit: (data: any) => void
 }
+
+type TransformFn = (value: unknown) => string
+
+type FieldMapperConfig = {
+  path: string
+  transform?: TransformFn
+}
+
+export type FieldMapper = Record<string, string | FieldMapperConfig>
+
+const toStringValue = (value: unknown) => {
+  if (value == null) return ""
+  return String(value)
+}
+
+const getByPath = (source: unknown, path: string): unknown => {
+  if (!source || !path) return undefined
+
+  return path
+    .split(".")
+    .reduce<unknown>((acc, key) => {
+      if (acc == null || typeof acc !== "object") return undefined
+      return (acc as Record<string, unknown>)[key]
+    }, source)
+}
+
+export const mapObjectToFormValues = <T extends object>(
+  source: T | null,
+  mapper: FieldMapper,
+  defaults: Record<string, string> = {}
+) => {
+  const values: Record<string, string> = { ...defaults }
+
+  for (const fieldName of Object.keys(mapper)) {
+    const config = mapper[fieldName]
+    const path = typeof config === "string" ? config : config.path
+    const transform = typeof config === "string"
+      ? toStringValue
+      : config.transform || toStringValue
+
+    const rawValue = source ? getByPath(source, path) : undefined
+    values[fieldName] = rawValue == null ? (defaults[fieldName] || "") : transform(rawValue)
+  }
+
+  return values
+}
+
+export const setFormValues = (
+  form: HTMLFormElement,
+  values: Record<string, string>
+) => {
+  for (const fieldName of Object.keys(values)) {
+    const element = form.querySelector(`[name='${fieldName}']`) as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+      | null
+
+    if (!element) continue
+    element.value = values[fieldName]
+  }
+}
+
 export function Form({
   children,
   onSubmit

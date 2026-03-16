@@ -415,6 +415,33 @@ describe('Services package', () => {
           })
         )
       })
+
+      it('should update employee with expected payload and id endpoint', async () => {
+        await employeeService.update(
+          10,
+          'Jane',
+          'Smith',
+          4,
+          'jane.smith@nexotic.com',
+          '0987654321',
+          9
+        )
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'employees/10/',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: 'Jane',
+              last_name: 'Smith',
+              department: 4,
+              email: 'jane.smith@nexotic.com',
+              phone: '0987654321',
+              job_position: 9
+            })
+          })
+        )
+      })
     })
   })
 })

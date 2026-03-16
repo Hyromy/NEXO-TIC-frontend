@@ -135,7 +135,7 @@ function ThisModal({ id }: { id: string }) {
   return (
     <Modal 
       id={id}
-      header={<h1 className="modal-title fs-5" id={id + "Label"}>Cambiar contraseña</h1>}
+      header={<span className="fs-3">Cambiar contraseña</span>}
       isStatic
       size="sm"
     >
