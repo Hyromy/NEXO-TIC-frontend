@@ -173,3 +173,19 @@ export const jobPositionService = {
     api.get(jobPositionService.endpoint + param(id))
   ),
 }
+
+export const employeeTerminationService = {
+  endpoint: API_URL + "employee-terminations/",
+
+  create: (
+    employee: number,
+    type: string,
+    reason: string,
+  ) => (
+    api.post(employeeTerminationService.endpoint, {
+      employee,
+      type,
+      reason,
+    })
+  )
+}

@@ -9,6 +9,7 @@ import {
   employeeService, type employee, type completeEmployee,
   departmentService, type department,
   jobPositionService, type jobPosition,
+  employeeTerminationService,
 } from "../../services/nexotic"
 import { Spinner } from "../../components/Spinner"
 import { parseEmployee, type EmployeeRecords } from "../../utils/parser"
@@ -26,8 +27,10 @@ import {
 } from "../../components/Form"
 import { isEmail, isPhone } from "../../utils/validator"
 import { Card } from "../../components/Card"
+import { Badge } from "../../components/Badge"
 
 const newEmployeeModalId = "add-employee-modal"
+const deleteEmployeeModalId = "delete-employee-modal"
 
 const employeeFormDefaults = {
   name: "",
@@ -220,7 +223,10 @@ function TableView ({
       name,
       row.job_position.department.name || "-",
       row.job_position.name || "-",
-      row.enabled ? "Activo" : "Inactivo",
+      <Badge 
+        type={row.enabled ? "primary" : "warning"} 
+        text={row.enabled ? "Activo" : "Inactivo"}
+      />,
       <Button variant="success" onClick={() => goToDetails(row)}>
         Detalles
       </Button>,
@@ -228,27 +234,25 @@ function TableView ({
   }
 
   return (
-    <>
-      <StackContainer>
-        <RowContainer>
-          <ColContainer defaultSize={9}>
-            <h2>Gestión de Empleados</h2>
-          </ColContainer>
-          <ColContainer defaultSize={3}>
-            <Button fat onClick={() => openAddEmployeeModal()}>
-              Nuevo Empleado
-            </Button>
-          </ColContainer>
-        </RowContainer>
-        { loading ? <Spinner /> : (
-          <Table
-            headers={["Nombre", "Departamento", "Puesto", "Estatus", "Acciones"]}
-            rows={parseEmployee(records)}
-            trDrawer={trDrawer}
-          />
-        )}
-      </StackContainer>
-    </>
+    <StackContainer>
+      <RowContainer>
+        <ColContainer defaultSize={9}>
+          <h2>Gestión de Empleados</h2>
+        </ColContainer>
+        <ColContainer defaultSize={3}>
+          <Button fat onClick={() => openAddEmployeeModal()}>
+            Nuevo Empleado
+          </Button>
+        </ColContainer>
+      </RowContainer>
+      { loading ? <Spinner /> : (
+        <Table
+          headers={["Nombre", "Departamento", "Puesto", "Estatus", "Acciones"]}
+          rows={parseEmployee(records)}
+          trDrawer={trDrawer}
+        />
+      )}
+    </StackContainer>
   )
 }
 
@@ -262,15 +266,20 @@ function DetailsView ({
 }: DetailsViewProps) {
   const header = (
     <RowContainer>
-      <ColContainer defaultSize={8}>
+      <ColContainer defaultSize={12} md={6}>
         <h2>Detalles del empleado</h2>
       </ColContainer>
-      <ColContainer defaultSize={2}>
+      <ColContainer defaultSize={12} md={2}>
         <Button variant="success" onClick={() => openAddEmployeeModal(employee)} fat>
           Editar
         </Button>
       </ColContainer>
-      <ColContainer defaultSize={2}>
+      <ColContainer defaultSize={12} md={2}>
+        <Button variant="danger" onClick={() => openModal(deleteEmployeeModalId)} fat>
+          Eliminar
+        </Button>
+      </ColContainer>
+      <ColContainer defaultSize={12} md={2}>
         <Button variant="secondary" onClick={goBack} fat>
           Volver
         </Button>
@@ -396,12 +405,15 @@ function DetailsView ({
   )
 
   return (
-    <StackContainer gap={4}>
-      {header}
-      {summary}
-      {history}
-      {details}
-    </StackContainer>
+    <>
+      <StackContainer gap={4}>
+        {header}
+        {summary}
+        {history}
+        {details}
+      </StackContainer>
+      <DeleteEmployeeModal employee={employee!} />
+    </>
   )
 }
 
@@ -626,6 +638,78 @@ function NewEmployeeModal ({
               isLoading={loading}
             >
               { loading ? <Spinner small /> : (formMode === "edit" ? "Actualizar" : "Registrar") }
+            </Button>
+          </StackContainer>
+        </StackContainer>
+      </Form>
+    </Modal>
+  )
+}
+
+type DeleteEmployeeModalProps = {
+  employee: completeEmployee
+}
+function DeleteEmployeeModal ({
+  employee,
+}: DeleteEmployeeModalProps) {
+  const { data, error, execute, loading } = useApi()
+
+  type expectedData = {
+    reason: string
+    type: string
+  }
+
+  const validate = (data: expectedData): string | "ok" => {
+    if (!data.reason || !data.type) {
+      return "Todos los campos son obligatorios."
+    }
+
+    return "ok"
+  }
+
+  const onSubmit = (data: expectedData) => {
+    const validation = validate(data)
+    if (validation != "ok") {
+      return alert(validation)
+    }
+
+    execute(
+      employeeTerminationService.create(
+        employee.id,
+        data.type,
+        data.reason,
+      )
+    )
+  }
+
+  useEffect(() => {
+    if (data) {
+      console.log("Empleado eliminado:", data)
+    }
+    if (error) {
+      alert('Error: ' + error)
+      console.error('Error:', error)
+    }
+  }, [data, error])
+
+  return (
+    <Modal id={deleteEmployeeModalId} header="Dar de baja empleado">
+      <Form onSubmit={onSubmit}>
+        <StackContainer gap={4}>
+          <div>
+            <TextField name="type" label="Tipo de baja"/>
+          </div>
+          <div>
+            <TextField name="reason" label="Motivo de baja" type="area"/>
+          </div>
+          <StackContainer center>
+            <Button
+              variant="danger"
+              isLoading={loading}
+              type="submit"
+              h_padding={5}
+            >
+              Eliminar
             </Button>
           </StackContainer>
         </StackContainer>
