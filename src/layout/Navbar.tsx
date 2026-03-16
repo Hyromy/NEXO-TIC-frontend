@@ -101,6 +101,12 @@ const validateData = (data: expectedData) => {
   if (password != password2) {
     return "Las contraseñas no coinciden"
   }
+  if (password.trim().length == 0) {
+    return "La contraseña no puede estar vacía"
+  }
+  if (password2.trim().length == 0) {
+    return "Por favor, confirma la contraseña"
+  }
   
   return "ok"
 }
@@ -124,15 +130,22 @@ function ThisModal({ id }: { id: string }) {
     }
     if (error) {
       console.error(error)
-      alert("Error cambiando contraseña")
+      launchAlert("main-float-container",
+        <Alert icon="error" type="danger">
+          Error cambiando contraseña.
+        </Alert>,
+      )
     }
   }, [data, error, id])
 
   const submitHandler = (data: expectedData) => {
     const validation = validateData(data)
     if (validation != "ok") {
-      alert(validation)
-      return
+      return launchAlert("main-float-container",
+        <Alert icon="warning" type="warning">
+          {validation}
+        </Alert>,
+      )
     }
 
     execute(authService.changePassword(data.password))
