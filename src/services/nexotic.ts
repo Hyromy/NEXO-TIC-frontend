@@ -189,3 +189,111 @@ export const employeeTerminationService = {
     })
   )
 }
+
+export type employmentHistory = {
+  id: id,
+  update_at: string,
+  description: string,
+  enabled: boolean,
+  employee: id,
+  last_job_position: id,
+  new_job_position: id
+}
+export type completeEmploymentHistory = Omit<employmentHistory, "employee" | "last_job_position" | "new_job_position"> & {
+  employee: completeEmployee,
+  last_job_position: completeJobPosition,
+  new_job_position: completeJobPosition,
+}
+export const employmentHistoryService = {
+  endpoint: API_URL + "employment-history/",
+
+  get: (id: number = 0): Promise<employmentHistory[] | employmentHistory> => (
+    api.get(employmentHistoryService.endpoint + param(id))
+  ),
+
+  create: (
+    description: string,
+    employee: number,
+    last_job_position: number,
+    new_job_position: number
+  ) => (
+    api.post(employmentHistoryService.endpoint, {
+      description,
+      employee,
+      last_job_position,
+      new_job_position,
+    })
+  ),
+}
+
+export type incident = {
+  id: id,
+  type: string,
+  date: string,
+  justified: string,
+  notes: string,
+  enabled: boolean,
+  employee: id
+}
+export const incidentsService = {
+  endpoint: API_URL + "incidents/",
+
+  get: (id: number = 0): Promise<incident[] | incident> => (
+    api.get(incidentsService.endpoint + param(id))
+  ),
+}
+
+export type vacationRequest = {
+  id: id,
+  date: string,
+  status: string,
+  enabled: boolean,
+  employee: id,
+}
+export type completeVacationRequest = Omit<vacationRequest, "employee"> & {
+  employee: completeEmployee,
+}
+export const vacationRequestsService = {
+  endpoint: API_URL + "vacation-requests/",
+
+  get: (id: number = 0): Promise<vacationRequest[] | vacationRequest> => (
+    api.get(vacationRequestsService.endpoint + param(id))
+  ),
+}
+
+export type vacationDetail = {
+  id: id,
+  selected_day: string,
+  enabled: boolean,
+  vacation_request: id,
+}
+export type completeVacationDetail = Omit<vacationDetail, "vacation_request"> & {
+  vacation_request: completeVacationRequest,
+}
+export const vacationDetailsService = {
+  endpoint: API_URL + "vacation-details/",
+
+  get: (id: number = 0): Promise<vacationDetail[] | vacationDetail> => (
+    api.get(vacationDetailsService.endpoint + param(id))
+  ),
+}
+
+export type vacationApproval = {
+  id: id,
+  date: string,
+  decision: string,
+  note: string,
+  enabled: boolean,
+  vacation_request: id,
+  approver: number,
+}
+export type completeVacationApproval = Omit<vacationApproval, "vacation_request"> & {
+  vacation_request: completeVacationRequest,
+}
+export const vacationApprovalsService = {
+  endpoint: API_URL + "vacation-approvals/",
+
+  get: (id: number = 0): Promise<vacationApproval[] | vacationApproval> => (
+    api.get(vacationApprovalsService.endpoint + param(id))
+  ),
+}

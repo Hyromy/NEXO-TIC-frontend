@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import Main from "../../layout/Main"
 import { Navigate } from "react-router-dom"
 import { Table } from "../../components/Table"
-import { ColContainer, RowContainer, StackContainer } from "../../layout/Containers"
+import { ColContainer, RowContainer, ScrollableContainer, StackContainer } from "../../layout/Containers"
 import useApi from "../../hooks/useApi"
 import {
   userService, type user,
@@ -10,9 +10,19 @@ import {
   departmentService, type department,
   jobPositionService, type jobPosition,
   employeeTerminationService,
+  employmentHistoryService, type employmentHistory, type completeEmploymentHistory,
+  incidentsService, type incident,
+  vacationRequestsService, type vacationRequest, type completeVacationRequest,
+  vacationDetailsService, type vacationDetail, type completeVacationDetail,
+  vacationApprovalsService, type vacationApproval, type completeVacationApproval,
 } from "../../services/nexotic"
 import { Spinner } from "../../components/Spinner"
-import { parseEmployee, type EmployeeRecords } from "../../utils/parser"
+import {
+  parseEmployee,
+  parseEmploymentHistory,
+  parseVacationRecords,
+  type EmployeeRecords
+} from "../../utils/parser"
 import { Button } from "../../components/Button"
 import { closeModal, Modal, openModal } from "../../components/Modal"
 import {
@@ -31,6 +41,8 @@ import { Badge } from "../../components/Badge"
 
 const newEmployeeModalId = "add-employee-modal"
 const deleteEmployeeModalId = "delete-employee-modal"
+
+const scrollContainerHeight = 256
 
 const employeeFormDefaults = {
   name: "",
@@ -83,6 +95,8 @@ const openAddEmployeeModal = (employee: completeEmployee | null = null) => {
     setFormValues(form, values)
     modal.setAttribute("data-department-value", values.department)
     modal.setAttribute("data-job-position-value", values.job_position)
+    modal.setAttribute("data-original-department-value", values.department)
+    modal.setAttribute("data-original-job-position-value", values.job_position)
   }
 
   updateLables(!employee)
@@ -144,7 +158,7 @@ export default function Gestion_Empleados() {
 
       setCurrentEmployee((prev) => {
         if (!prev) return prev
-        return parsedEmployees.find((employee) => employee.id === prev.id) || prev
+        return parsedEmployees.find((employee) => employee.id == prev.id) || prev
       })
     }
 
@@ -166,8 +180,13 @@ export default function Gestion_Empleados() {
         />
 
       case 'details':
+        const records: EmployeeRecords | null = requestData
+          ? [requestData.users, requestData.departments, requestData.jobPositions, requestData.employees]
+          : null
+
         return <DetailsView
           employee={currentEmployee}
+          records={records}
           goBack={() => {
             setCurrentEmployee(null)
             getData()
@@ -258,12 +277,81 @@ function TableView ({
 
 type DetailsViewProps = {
   employee: completeEmployee | null
+  records: EmployeeRecords | null
   goBack: () => void
 }
 function DetailsView ({
   employee,
+  records,
   goBack,
 }: DetailsViewProps) {
+  const { data, error, execute, loading } = useApi<[
+    employmentHistory[] | employmentHistory,
+    incident[] | incident,
+    vacationRequest[] | vacationRequest,
+    vacationDetail[] | vacationDetail,
+    vacationApproval[] | vacationApproval
+  ]>()
+
+  const [requestData, setRequestData] = useState<{
+    history: completeEmploymentHistory[]
+    incidents: incident[]
+    vacationRequests: completeVacationRequest[]
+    vacationDetails: completeVacationDetail[]
+    vacationApprovals: completeVacationApproval[]
+  }>({
+    history: [],
+    incidents: [],
+    vacationRequests: [],
+    vacationDetails: [],
+    vacationApprovals: [],
+  })
+
+  const asArray = <T,>(value: T | T[]): T[] => (
+    Array.isArray(value) ? value : [value]
+  )
+
+  useEffect(() => {
+    if (!employee?.id) return
+
+    execute(
+      employmentHistoryService.get(),
+      incidentsService.get(),
+      vacationRequestsService.get(),
+      vacationDetailsService.get(),
+      vacationApprovalsService.get(),
+    )
+  }, [employee?.id, employee?.job_position.id])
+
+  useEffect(() => {
+    if (data) {
+      const fromThisEmployee = (item: employmentHistory | incident) => (
+        item.employee == employee?.id
+      )
+
+      const vacationData = parseVacationRecords({
+        requests: asArray(data[2]),
+        details: asArray(data[3]),
+        approvals: asArray(data[4]),
+      }, records, employee?.id)
+
+      setRequestData({
+        history: parseEmploymentHistory(
+          asArray(data[0]).filter(fromThisEmployee) as employmentHistory[],
+          records
+        ),
+        incidents: asArray(data[1]).filter(fromThisEmployee) as incident[],
+        vacationRequests: vacationData.requests,
+        vacationDetails: vacationData.details,
+        vacationApprovals: vacationData.approvals,
+      })
+    }
+    if (error) {
+      alert('Error: ' + error)
+      console.error('Error:', error)
+    }
+  }, [data, error, employee?.id, records])
+
   const header = (
     <RowContainer>
       <ColContainer defaultSize={12} md={6}>
@@ -314,91 +402,90 @@ function DetailsView ({
     </RowContainer>
   )
 
-  const rowsHistory = [
-    {
-      date: "2025-02-01",
-      oldDepartment: "RH",
-      oldJobPosition: "Analista",
-      newDepartment: "Finanzas",
-      newJobPosition: "Analista Senior",
-    },
-    {
-      date: "2025-06-15",
-      oldDepartment: "Finanzas",
-      oldJobPosition: "Analista Senior",
-      newDepartment: "Finanzas",
-      newJobPosition: "Gerente de Finanzas",
-    },
-  ]
-  const historyTrDrawer = (row: typeof rowsHistory[0]) => [
-    row.date,
-    row.oldDepartment,
-    row.oldJobPosition,
-    row.newDepartment,
-    row.newJobPosition,
-  ]
   const history = (
     <Card header="Historial laboral" padding={3}>
-      <Table
-        headers={["Fecha de cambio", "Departamento anterior", "Puesto anterior", "Nuevo departamento ", "Nuevo puesto"]}
-        rows={rowsHistory}
-        trDrawer={historyTrDrawer}
-      />
+      {requestData.history.length > 0 ? (
+        <ScrollableContainer height={scrollContainerHeight}>
+          <Table
+            headers={["Fecha de cambio", "Departamento anterior", "Puesto anterior", "Nuevo departamento ", "Nuevo puesto"]}
+            rows={requestData.history}
+            trDrawer={(row: completeEmploymentHistory) => [
+              row.update_at,
+              row.last_job_position.department.name,
+              row.last_job_position.name,
+              row.new_job_position.department.name,
+              row.new_job_position.name,
+            ]}
+          />
+        </ScrollableContainer>
+      ) : (
+        <StackContainer center>
+          No hay historial previo.
+        </StackContainer>
+      )}
     </Card>
   )
 
-  const rowIncidences = [
-    {
-      type: "Falta",
-      status: "No justificada",
-      date: "2025-03-10",
-    },
-    {
-      type: "Tardanza",
-      status: "Justificada",
-      date: "2025-04-05",
-    }
-  ]
-  const incidenceTrDrawer = (row: typeof rowIncidences[0]) => [
-    row.type,
-    row.status,
-    row.date,
-  ]
   const rowHolidays = [
-    {
-      days: 4,
-      status: "Aprobada",
-      start: "2025-05-01",
-    },
-    {
-      days: 2,
-      status: "Rechazada",
-      start: "2025-06-20",
-    }
-  ]
-  const holidaysTrDrawer = (row: typeof rowHolidays[0]) => [
-    row.days + ` día${row.days > 1 && "s"}`,
-    row.status,
-    row.start,
+    ...requestData.vacationRequests.map((request) => {
+      const detail = requestData.vacationDetails.find((d) => d.vacation_request.id == request.id)
+      const approval = requestData.vacationApprovals.find((a) => a.vacation_request.id == request.id)
+
+      return {
+        requestId: request.id,
+        requestDate: request.date,
+        status: request.status,
+        selectedDay: detail?.selected_day || "-",
+        decision: approval?.decision || "-",
+        approver: approval ? String(approval.approver) : "-",
+      }
+    }),
   ]
   const details = (
     <RowContainer>
       <ColContainer defaultSize={12} lg={6}>
         <Card header="Incidencias" padding={3}>
-          <Table
-            headers={[]}
-            rows={rowIncidences}
-            trDrawer={incidenceTrDrawer}
-          />
+          {requestData.incidents.length > 0 ? (
+            <ScrollableContainer height={scrollContainerHeight}>
+              <Table
+                headers={[]}
+                rows={requestData.incidents}
+                trDrawer={(row: incident) => [
+                  row.type,
+                  row.justified,
+                  row.date,
+                ]}
+              />
+            </ScrollableContainer>
+          ) : (
+            <StackContainer center>
+              No hay incidencias registradas.
+            </StackContainer>
+          )}
         </Card>
       </ColContainer>
       <ColContainer defaultSize={12} lg={6}>
         <Card header="Vacaciones" padding={3}>
-          <Table
-            headers={[]}
-            rows={rowHolidays}
-            trDrawer={holidaysTrDrawer}
-          />
+          {rowHolidays.length > 0 ? (
+            <ScrollableContainer height={scrollContainerHeight}>
+              <Table
+                headers={["Solicitud", "Fecha", "Estatus", "Dia", "Decision", "Aprobador"]}
+                rows={rowHolidays}
+                trDrawer={(row: typeof rowHolidays[0]) => [
+                  `#${row.requestId}`,
+                  row.requestDate,
+                  row.status,
+                  row.selectedDay,
+                  row.decision,
+                  row.approver,
+                ]}
+              />
+            </ScrollableContainer>
+          ) : (
+            <StackContainer center>
+              No hay vacaciones registradas.
+            </StackContainer>
+          )}
         </Card>
       </ColContainer>
     </RowContainer>
@@ -408,9 +495,13 @@ function DetailsView ({
     <>
       <StackContainer gap={4}>
         {header}
-        {summary}
-        {history}
-        {details}
+        {loading ? <Spinner /> : (
+          <>
+            {summary}
+            {history}
+            {details}
+          </>
+        )}
       </StackContainer>
       <DeleteEmployeeModal employee={employee!} />
     </>
@@ -451,7 +542,7 @@ function NewEmployeeModal ({
       const form = modalElement.querySelector("form") as HTMLFormElement | null
       if (!form) return
 
-      const mode = modalElement.getAttribute("data-mode") === "edit" ? "edit" : "create"
+      const mode = modalElement.getAttribute("data-mode") == "edit" ? "edit" : "create"
       setFormMode(mode)
 
       const departmentValue = modalElement.getAttribute("data-department-value")
@@ -507,11 +598,20 @@ function NewEmployeeModal ({
     const modalElement = document.getElementById(newEmployeeModalId)
     const mode = modalElement?.getAttribute("data-mode") || "create"
     const employeeId = parseInt(modalElement?.getAttribute("data-employee-id") || "", 10)
-    const normalizedMode: "create" | "edit" = mode === "edit" ? "edit" : "create"
+    const originalDepartment = modalElement?.getAttribute("data-original-department-value") || ""
+    const originalJobPosition = modalElement?.getAttribute("data-original-job-position-value") || ""
+    const originalJobPositionId = parseInt(originalJobPosition, 10)
+    const newJobPositionId = parseInt(fd.job_position, 10)
+    const normalizedMode: "create" | "edit" = mode == "edit" ? "edit" : "create"
     setSubmittedMode(normalizedMode)
 
     if (mode == "edit" && Number.isInteger(employeeId) && employeeId > 0) {
-      execute(
+      const hasWorkAreaChanges = (
+        fd.department != originalDepartment ||
+        fd.job_position != originalJobPosition
+      )
+
+      const requests = [
         employeeService.update(
           employeeId,
           fd.name,
@@ -520,8 +620,27 @@ function NewEmployeeModal ({
           fd.email + "@nexotic.com",
           fd.phone,
           parseInt(fd.job_position, 10),
-        )
+        ),
+      ]
+
+      const hasValidHistoryParams = (
+        Number.isInteger(employeeId) &&
+        Number.isInteger(originalJobPositionId) &&
+        Number.isInteger(newJobPositionId)
       )
+
+      if (hasWorkAreaChanges && hasValidHistoryParams) {
+        requests.push(
+          employmentHistoryService.create(
+            "Cambio de area/puesto desde gestión de empleados",
+            employeeId,
+            originalJobPositionId,
+            newJobPositionId,
+          )
+        )
+      }
+
+      execute(...requests)
     } else {
       execute(
         employeeService.create(
@@ -540,7 +659,7 @@ function NewEmployeeModal ({
     if (!submittedMode) return
 
     if (data as employee) {
-      const successMessage = submittedMode === "edit"
+      const successMessage = submittedMode == "edit"
         ? "Empleado actualizado exitosamente."
         : "Empleado registrado exitosamente. El empleado recibirá un correo para configurar su cuenta."
 
@@ -637,7 +756,7 @@ function NewEmployeeModal ({
               h_padding={5}
               isLoading={loading}
             >
-              { loading ? <Spinner small /> : (formMode === "edit" ? "Actualizar" : "Registrar") }
+              { loading ? <Spinner small /> : (formMode == "edit" ? "Actualizar" : "Registrar") }
             </Button>
           </StackContainer>
         </StackContainer>
@@ -717,3 +836,7 @@ function DeleteEmployeeModal ({
     </Modal>
   )
 }
+
+/* 
+  espero que esta vista no tenga problemas pq me da flojera solo de verlo
+*/

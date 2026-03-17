@@ -84,7 +84,7 @@ export default function Main({
               {menu}
             </Canvas>
           </div>
-          <main className="p-4 container">
+          <main className="p-4 container-xxl">
             {children}
           </main>
         </div>
