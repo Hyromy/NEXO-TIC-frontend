@@ -8,6 +8,7 @@ import {
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
 import { Table } from "../../components/Table";
+import { Badge } from "../../components/Badge";
 
 interface TarjetaData {
   titulo: string;
@@ -112,8 +113,13 @@ function TarjetasVacaciones({ data }: { data: TarjetaData[] }) {
 
 function BotonSolicitar() {
   return (
-    <div style={{ width: "fit-content" }}>
-      <Button variant="primary">Solicitar Vacaciones</Button>
+    <div>
+      <Button
+        variant="primary"
+        onClick={() => alert("¿Quieres solicitar vacaciones?")}
+      >
+        Solicitar Vacaciones
+      </Button>
     </div>
   );
 }
@@ -136,14 +142,11 @@ function TablaSolicitudes({ data }: { data: Solicitud[] }) {
           item.id,
           item.fechas,
           item.dias,
-          <span
+          <Badge
             key={`status-${item.id}`}
-            className={
-              item.estatus === "Aprobada" ? "text-success" : "text-warning"
-            }
-          >
-            {item.estatus}
-          </span>,
+            text={item.estatus}
+            type={item.estatus === "Aprobada" ? "success" : "warning"}
+          />,
           item.acciones,
         ]}
       />
@@ -167,6 +170,14 @@ function DetalleSolicitud({ onVolver }: { onVolver: () => void }) {
     { dia: 12, mes: "01", anio: 2026 },
     { dia: 13, mes: "01", anio: 2026 },
   ];
+  
+  const solicitud = {
+  nombre: "Jonathan Hernández",
+  fechaSolicitud: "18/09/2024",
+  dias: 3,
+  estatus: "Aprobada",
+  comentario: "Sus vacaciones serán aprobadas...",
+};
 
   return (
     <Main>
@@ -187,16 +198,16 @@ function DetalleSolicitud({ onVolver }: { onVolver: () => void }) {
 
           <RowContainer gap={2}>
             <ColContainer md={6}>
-              <Card>Nombre: Jonathan Hernández</Card>
+              <Card>Nombre: {solicitud.nombre}</Card>
             </ColContainer>
             <ColContainer md={6}>
-              <Card>Fecha de la Solicitud: 18/09/2024</Card>
+              <Card>Fecha de la Solicitud: {solicitud.fechaSolicitud}</Card>
             </ColContainer>
             <ColContainer md={6}>
-              <Card>Dias Solicitados: 3</Card>
+              <Card>Días Solicitados: {solicitud.dias}</Card>
             </ColContainer>
             <ColContainer md={6}>
-              <Card>Estatus: Aprobada</Card>
+              <Card>Estatus: {solicitud.estatus}</Card>
             </ColContainer>
           </RowContainer>
 
@@ -223,7 +234,7 @@ function DetalleSolicitud({ onVolver }: { onVolver: () => void }) {
             </ColContainer>
             <ColContainer lg={4}>
               <Card header="COMENTARIO">
-                <p>Sus vacaciones serán aprobadas...</p>
+                <p>{solicitud.comentario}</p>
               </Card>
             </ColContainer>
           </RowContainer>
