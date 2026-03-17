@@ -2,8 +2,17 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { getDataFromForm, getHumanName, getTheme } from "../utils/getters"
 import { setTheme } from "../utils/setters"
 import * as validator from "../utils/validator"
-import { parseEmployee } from "../utils/parser"
-import type { department, employee, jobPosition, user } from "../services/nexotic"
+import { parseEmployee, parseEmploymentHistory, parseVacationRecords } from "../utils/parser"
+import type {
+  department,
+  employee,
+  jobPosition,
+  user,
+  employmentHistory,
+  vacationRequest,
+  vacationDetail,
+  vacationApproval,
+} from "../services/nexotic"
 
 describe("Utils package", () => {
   describe("getters.ts", () => {
@@ -262,6 +271,187 @@ describe("Utils package", () => {
       const result = parseEmployee([users, departments, jobPositions, employees])
 
       expect(result).toEqual([])
+    })
+
+    it("should compose complete employment history records", () => {
+      const users: user[] = [{
+        id: 1,
+        last_login: "",
+        is_superuser: false,
+        username: "jdoe",
+        first_name: "John",
+        last_name: "Doe",
+        email: "john@example.com",
+        is_staff: false,
+        is_active: true,
+        date_joined: "",
+        groups: [],
+        user_permissions: [],
+      }]
+      const departments: department[] = [{ id: 10, name: "RH", description: "", enabled: true }]
+      const jobPositions: jobPosition[] = [
+        { id: 100, name: "Analista", description: "", enabled: true, department: 10 },
+        { id: 101, name: "Senior", description: "", enabled: true, department: 10 },
+      ]
+      const employees: employee[] = [{
+        id: 1000,
+        join_date: "2025-01-01",
+        phone: "1234567",
+        enabled: true,
+        user: 1,
+        job_position: 100,
+      }]
+      const history: employmentHistory[] = [{
+        id: 1,
+        update_at: "2026-01-01",
+        description: "Cambio de puesto",
+        enabled: true,
+        employee: 1000,
+        last_job_position: 100,
+        new_job_position: 101,
+      }]
+
+      const result = parseEmploymentHistory(history, [users, departments, jobPositions, employees])
+
+      expect(result).toHaveLength(1)
+      expect(result[0].employee.id).toBe(1000)
+      expect(result[0].last_job_position.name).toBe("Analista")
+      expect(result[0].new_job_position.name).toBe("Senior")
+    })
+
+    it("should skip employment history with missing references", () => {
+      const history: employmentHistory[] = [{
+        id: 1,
+        update_at: "",
+        description: "",
+        enabled: true,
+        employee: 999,
+        last_job_position: 888,
+        new_job_position: 777,
+      }]
+
+      const result = parseEmploymentHistory(history, [[], [], [], []])
+      expect(result).toEqual([])
+    })
+
+    it("should compose complete vacation records filtered by employee", () => {
+      const users: user[] = [{
+        id: 1,
+        last_login: "",
+        is_superuser: false,
+        username: "jdoe",
+        first_name: "John",
+        last_name: "Doe",
+        email: "john@example.com",
+        is_staff: false,
+        is_active: true,
+        date_joined: "",
+        groups: [],
+        user_permissions: [],
+      }]
+      const departments: department[] = [{ id: 10, name: "RH", description: "", enabled: true }]
+      const jobPositions: jobPosition[] = [{
+        id: 100,
+        name: "Analista",
+        description: "",
+        enabled: true,
+        department: 10,
+      }]
+      const employees: employee[] = [{
+        id: 1000,
+        join_date: "2025-01-01",
+        phone: "1234567",
+        enabled: true,
+        user: 1,
+        job_position: 100,
+      }]
+
+      const requests: vacationRequest[] = [
+        { id: 1, date: "2025-12-04T00:00:00Z", status: "status", enabled: true, employee: 1000 },
+        { id: 2, date: "2025-12-10T00:00:00Z", status: "status", enabled: true, employee: 9999 },
+      ]
+      const details: vacationDetail[] = [
+        { id: 1, selected_day: "2025-12-04", enabled: true, vacation_request: 1 },
+        { id: 2, selected_day: "2025-12-10", enabled: true, vacation_request: 2 },
+      ]
+      const approvals: vacationApproval[] = [
+        {
+          id: 1,
+          date: "2025-12-04T00:00:00Z",
+          decision: "approved",
+          note: "ok",
+          enabled: true,
+          vacation_request: 1,
+          approver: 44,
+        },
+      ]
+
+      const result = parseVacationRecords(
+        { requests, details, approvals },
+        [users, departments, jobPositions, employees],
+        1000
+      )
+
+      expect(result.requests).toHaveLength(1)
+      expect(result.details).toHaveLength(1)
+      expect(result.approvals).toHaveLength(1)
+      expect(result.requests[0].employee.id).toBe(1000)
+      expect(result.details[0].vacation_request.id).toBe(1)
+      expect(result.approvals[0].vacation_request.id).toBe(1)
+    })
+
+    it("should drop vacation details and approvals without request relation", () => {
+      const users: user[] = [{
+        id: 1,
+        last_login: "",
+        is_superuser: false,
+        username: "jdoe",
+        first_name: "John",
+        last_name: "Doe",
+        email: "john@example.com",
+        is_staff: false,
+        is_active: true,
+        date_joined: "",
+        groups: [],
+        user_permissions: [],
+      }]
+      const departments: department[] = [{ id: 10, name: "RH", description: "", enabled: true }]
+      const jobPositions: jobPosition[] = [{
+        id: 100,
+        name: "Analista",
+        description: "",
+        enabled: true,
+        department: 10,
+      }]
+      const employees: employee[] = [{
+        id: 1000,
+        join_date: "2025-01-01",
+        phone: "1234567",
+        enabled: true,
+        user: 1,
+        job_position: 100,
+      }]
+
+      const result = parseVacationRecords(
+        {
+          requests: [{ id: 1, date: "", status: "", enabled: true, employee: 1000 }],
+          details: [{ id: 10, selected_day: "", enabled: true, vacation_request: 999 }],
+          approvals: [{
+            id: 20,
+            date: "",
+            decision: "",
+            note: "",
+            enabled: true,
+            vacation_request: 999,
+            approver: 7,
+          }],
+        },
+        [users, departments, jobPositions, employees],
+      )
+
+      expect(result.requests).toHaveLength(1)
+      expect(result.details).toEqual([])
+      expect(result.approvals).toEqual([])
     })
   })
 })
