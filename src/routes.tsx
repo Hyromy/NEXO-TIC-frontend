@@ -16,6 +16,7 @@ import GestionEmpleados from "./pages/rrhh/Gestion_Empleados"
 import Aprobaciones from "./pages/rrhh/Aprobaciones"
 import Reportes from "./pages/rrhh/Reportes"
 import AvisosRH from "./pages/rrhh/Avisos_RH"
+import Nuevo_Aviso from "./pages/rrhh/Nuevo_Aviso"
 
 import { type UserType } from "./hooks/useUser"
 
@@ -44,6 +45,7 @@ export const rawRoutes = {
     approvals: "/approvals",
     reports: "/reports",
     notices: "/notices",
+    newNotice: "/notices/new",
   },
 }
 
@@ -107,7 +109,7 @@ export const protectedRoutes: appRoute[] = [
   { 
     path: rawRoutes.rrhh.employees,
     element: <GestionEmpleados />,
-    allowedFor: ["rrhh"],
+    allowedFor: ["all"],
     label: "Empleados",
     icon: "people-fill",
     type: "module"
@@ -123,10 +125,17 @@ export const protectedRoutes: appRoute[] = [
   { 
     path: rawRoutes.rrhh.notices,
     element: <AvisosRH />,
-    allowedFor: ["rrhh"],
+    allowedFor: ["all"],
     label: "Avisos",
     icon: "megaphone-fill",
     type: "module"
+  },
+  { 
+  path: rawRoutes.rrhh.newNotice,
+  element: <Nuevo_Aviso />,
+  allowedFor: ["all"],
+  label: "Nuevo aviso",
+  icon: "plus-circle-fill",
   },
   { 
     path: rawRoutes.common.incidents,
