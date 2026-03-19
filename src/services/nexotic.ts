@@ -67,3 +67,18 @@ export const authService = {
     })
   ),
 }
+
+export const vacationService = {
+  endpoint: API_URL + "vacation-periods/",
+  get: (id: number = 0) => api.get(vacationService.endpoint + param(id)),
+}
+
+export const vacationRequestService = {
+  endpoint: API_URL + "vacation-requests/",
+  get: (id: number = 0) => api.get(vacationRequestService.endpoint + param(id)),
+}
+
+export const vacationDetailService = {
+  endpoint: API_URL + "vacation-details/",
+  get: (id: number = 0) => api.get(vacationDetailService.endpoint + param(id)),
+}
