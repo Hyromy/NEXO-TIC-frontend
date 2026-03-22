@@ -1,45 +1,26 @@
-import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import Main from "../../layout/Main"
 import { Card } from "../../components/Card"
 import { Button } from "../../components/Button"
+import { Form, TextField, Select, Option } from "../../components/Form"
 
-type Aviso = {
-  id: number
-  tipo: "Urgente" | "Aviso importante" | "Informe"
+type NuevoAvisoData = {
   titulo: string
   contenido: string
-  tiempo: string
+  prioridad: string
 }
 
 export default function Nuevo_Aviso() {
   const navigate = useNavigate()
 
-  const [titulo, setTitulo] = useState("")
-  const [contenido, setContenido] = useState("")
-  const [prioridad, setPrioridad] = useState("")
+  const handleSubmit = (data: NuevoAvisoData) => {
+    const { titulo, contenido, prioridad } = data
 
-  const handleSubmit = () => {
     if (!titulo || !contenido || !prioridad) {
       alert("Todos los campos son obligatorios.")
       return
     }
-
-    const avisosGuardados = localStorage.getItem("avisosRH")
-    const avisosActuales: Aviso[] = avisosGuardados ? JSON.parse(avisosGuardados) : []
-
-    const nuevoAviso: Aviso = {
-      id: Date.now(),
-      tipo: prioridad as "Urgente" | "Aviso importante" | "Informe",
-      titulo: titulo,
-      contenido: contenido,
-      tiempo: "Publicado hace unos segundos"
-    }
-
-    const nuevosAvisos = [nuevoAviso, ...avisosActuales]
-
-    localStorage.setItem("avisosRH", JSON.stringify(nuevosAvisos))
 
     alert("Aviso creado correctamente.")
     navigate("/notices")
@@ -56,57 +37,47 @@ export default function Nuevo_Aviso() {
           </Button>
         </div>
 
-        <div className="mb-3">
-          <label htmlFor="titulo" className="form-label">
-            Título
-          </label>
-          <input
-            id="titulo"
-            className="form-control"
-            type="text"
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
-            placeholder="Escribe el título del aviso"
-          />
-        </div>
+        <Form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <TextField
+              name="titulo"
+              label="Título"
+              placeholder="Escribe el título del aviso"
+            />
+          </div>
 
-        <div className="mb-3">
-          <label htmlFor="contenido" className="form-label">
-            Contenido
-          </label>
-          <textarea
-            id="contenido"
-            className="form-control"
-            rows={5}
-            value={contenido}
-            onChange={(e) => setContenido(e.target.value)}
-            placeholder="Escribe el contenido del aviso"
-          />
-        </div>
+          <div className="mb-3">
+            <TextField
+              name="contenido"
+              type="area"
+              rows={5}
+              label="Contenido"
+              placeholder="Escribe el contenido del aviso"
+            />
+          </div>
 
-        <div className="mb-4">
-          <label htmlFor="prioridad" className="form-label">
-            Prioridad
-          </label>
-          <select
-            id="prioridad"
-            className="form-select"
-            value={prioridad}
-            onChange={(e) => setPrioridad(e.target.value)}
-          >
-            <option value="">Seleccione una prioridad</option>
-            <option value="Informe">Informe</option>
-            <option value="Aviso importante">Aviso importante</option>
-            <option value="Urgente">Urgente</option>
-          </select>
-        </div>
+          <div className="mb-4">
+            <label htmlFor="field-prioridad" className="form-label">
+              Prioridad
+            </label>
 
-        <div className="d-flex gap-2">
-          <Button variant="primary" onClick={handleSubmit}>
-            Crear
-          </Button>
+            <Select
+              name="prioridad"
+              options={[
+                <Option key="default" value="" text="Seleccione una prioridad" disabled />,
+                <Option key="informe" value="Informe" text="Informe" />,
+                <Option key="importante" value="Aviso importante" text="Aviso importante" />,
+                <Option key="urgente" value="Urgente" text="Urgente" />
+              ]}
+            />
+          </div>
 
-        </div>
+          <div className="d-flex gap-2">
+            <Button variant="primary" type="submit">
+              Crear
+            </Button>
+          </div>
+        </Form>
       </Card>
     </Main>
   )

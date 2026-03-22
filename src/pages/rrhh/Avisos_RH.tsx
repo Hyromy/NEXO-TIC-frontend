@@ -2,15 +2,8 @@ import Main from "../../layout/Main"
 import { Card } from "../../components/Card"
 import { Button } from "../../components/Button"
 import { useNavigate } from "react-router-dom"
-import { useEffect, useState } from "react"
 
-type Aviso = {
-  id: number
-  tipo: "Urgente" | "Aviso importante" | "Informe"
-  titulo: string
-  contenido: string
-  tiempo: string
-}
+import { type Aviso } from "./types"
 
 const AVISOS_INICIALES: Aviso[] = [
   {
@@ -45,18 +38,8 @@ const AVISOS_INICIALES: Aviso[] = [
 
 export default function Avisos_RH() {
   const navigate = useNavigate()
-  const [avisos, setAvisos] = useState<Aviso[]>([])
 
-  useEffect(() => {
-    const avisosGuardados = localStorage.getItem("avisosRH")
-
-    if (avisosGuardados) {
-      setAvisos(JSON.parse(avisosGuardados))
-    } else {
-      localStorage.setItem("avisosRH", JSON.stringify(AVISOS_INICIALES))
-      setAvisos(AVISOS_INICIALES)
-    }
-  }, [])
+  const avisosRecientes = AVISOS_INICIALES.slice(0, 3)
 
   const getIcono = (tipo: Aviso["tipo"]) => {
     if (tipo === "Urgente") return "🚨"
@@ -64,34 +47,9 @@ export default function Avisos_RH() {
     return "📢"
   }
 
-  const getColorClasses = (tipo: Aviso["tipo"]) => {
-    if (tipo === "Urgente") {
-      return "border border-danger bg-danger-subtle"
-    }
-    if (tipo === "Aviso importante") {
-      return "border border-warning bg-warning-subtle"
-    }
-    return "border border-info bg-info-subtle"
-  }
-
-  const getTitleClasses = (tipo: Aviso["tipo"]) => {
-    if (tipo === "Urgente") {
-      return "text-danger"
-    }
-    if (tipo === "Aviso importante") {
-      return "text-warning-emphasis"
-    }
-    return "text-info-emphasis"
-  }
-
-  const avisosRecientes = avisos.slice(0, 3)
-
   const renderAviso = (aviso: Aviso) => (
-    <div
-      key={aviso.id}
-      className={`rounded p-3 ${getColorClasses(aviso.tipo)}`}
-    >
-      <p className={`fw-bold mb-2 ${getTitleClasses(aviso.tipo)}`}>
+    <Card key={aviso.id} padding={3}>
+      <p className="fw-bold mb-2">
         {getIcono(aviso.tipo)} {aviso.tipo}: {aviso.titulo}
       </p>
 
@@ -100,7 +58,7 @@ export default function Avisos_RH() {
       </p>
 
       <small className="text-muted">{aviso.tiempo}</small>
-    </div>
+    </Card>
   )
 
   return (
@@ -129,7 +87,7 @@ export default function Avisos_RH() {
           <h5 className="mb-3">Todos los anuncios</h5>
 
           <div className="d-flex flex-column gap-3">
-            {avisos.map(renderAviso)}
+            {AVISOS_INICIALES.map(renderAviso)}
           </div>
         </div>
       </Card>

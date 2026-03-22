@@ -109,7 +109,7 @@ export const protectedRoutes: appRoute[] = [
   { 
     path: rawRoutes.rrhh.employees,
     element: <GestionEmpleados />,
-    allowedFor: ["all"],
+    allowedFor: ["rrhh"],
     label: "Empleados",
     icon: "people-fill",
     type: "module"
@@ -125,17 +125,17 @@ export const protectedRoutes: appRoute[] = [
   { 
     path: rawRoutes.rrhh.notices,
     element: <AvisosRH />,
-    allowedFor: ["all"],
+    allowedFor: ["rrhh"],
     label: "Avisos",
     icon: "megaphone-fill",
     type: "module"
   },
   { 
-  path: rawRoutes.rrhh.newNotice,
-  element: <Nuevo_Aviso />,
-  allowedFor: ["all"],
-  label: "Nuevo aviso",
-  icon: "plus-circle-fill",
+    path: rawRoutes.rrhh.newNotice,
+    element: <Nuevo_Aviso />,
+    allowedFor: ["rrhh"],
+    label: "Nuevo aviso",
+    icon: "plus-circle-fill",
   },
   { 
     path: rawRoutes.common.incidents,
