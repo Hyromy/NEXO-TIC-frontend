@@ -59,6 +59,18 @@ type AlertLinkProps = {
   text: string
   newWindow?: boolean
 }
+/**
+ * 
+ * @example
+ * <Alert type="info">
+ *   Navigate to other 
+ *   <AlertLink href="https://www.example.com" text="site" newWindow />
+ * </Alert>
+ * 
+ * @param href - The URL that the link points to. Default is "#".
+ * @param text - The text to display for the link.
+ * @param newWindow - If true, the link will open in a new window. Default is false (opens in the same window).
+ */
 export function AlertLink({
   href = "#",
   text,
@@ -69,6 +81,26 @@ export function AlertLink({
   )
 }
 
+/**
+ * Launches a new alert in the specified container. The alert must be a valid React element of type Alert.
+ * 
+ * @example
+ * function SomeComponent() {
+ *   const idContainer = "container"
+ * 
+ *   launchAlert(
+ *     idContainer,
+ *     <Alert>Page Loaded</Alert>
+ *   )
+ * 
+ *   return (
+ *    <div id={idContainer}></div>
+ *   )
+ * }
+ * 
+ * @param containerId 
+ * @param alert 
+ */
 export function launchAlert(
   containerId: string,
   alert: ReactNode,

@@ -5,6 +5,21 @@ type BreadcrumbProps = {
   }>
   divider?: string
 }
+/**
+ * Breadcrumb component. Used to display a breadcrumb navigation. It can be used to display the current page and its ancestors.
+ * 
+ * @example
+ * <Breadcrumb
+ *   items={[
+ *     { label: "Home", href: "/" },
+ *     { label: "Library", href: "/library" },
+ *     { label: "Data", href: "/library/data" },
+ *   ]}
+ * />
+ * 
+ * @param items - Array of breadcrumb items. Each item must have a label and an href.
+ * @param divider - Custom divider character or string to separate breadcrumb items. Default is "/". If set to null, the default divider will be used.
+ */
 export function Breadcrumb({
   items,
   divider = "/",
