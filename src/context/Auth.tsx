@@ -26,6 +26,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 type AuthProviderProps = {
   children: ReactNode
 }
+/**
+ * Provider for managing authentication state.
+ * 
+ * Checks for valid tokens on mount and provides logout functionality.
+ * Handles token expiration and ensures the app knows if the user is authenticated.
+ * 
+ * @example
+ * <AuthProvider>
+ *   <App />
+ * </AuthProvider>
+ * 
+ * @param children - The child components that will have access to the authentication context.
+ * @returns The AuthContext provider with authentication state and functions.
+ */
 export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
@@ -71,6 +85,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   </AuthContext.Provider>
 }
 
+/**
+ * Hook to access authentication state and functions from the AuthContext.
+ * 
+ * @example
+ * const { isAuthenticated, isLoading, logout, checkAuth } = useAuth()
+ * 
+ * if (isLoading) console.log("Checking authentication...")
+ * if (isAuthenticated) console.log("User is authenticated")
+ * 
+ * logout() // to log the user out
+ * checkAuth() // to re-check authentication status
+ * 
+ * @throws Will throw an error if used outside of an AuthProvider.
+ * 
+ * @returns An object containing authentication state and functions:
+ * - `isAuthenticated`: boolean indicating if the user is authenticated.
+ * - `isLoading`: boolean indicating if the authentication state is still loading.
+ * - `logout`: function to log the user out.
+ * - `checkAuth`: function to check the current authentication status (useful after login/logout).
+ */
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
@@ -86,6 +120,27 @@ type ProtectedRouteProps = {
   notUserNavigateTo?: string,
   allowedFor?: Array<UserType | "all">
 }
+/**
+ * A route component that protects its children from unauthenticated or unauthorized access.
+ * 
+ * Checks if the user is authenticated and has the required permissions before rendering the children. If not authenticated, it redirects to a specified route. If authenticated but not authorized, it redirects to another specified route.
+ * 
+ * @example
+ * <ProtectedRoute 
+ *   allowedFor={["admin", "editor"]}
+ *   notAuthNavigateTo="/login"
+ *   notUserNavigateTo="/no-access"
+ * >
+ *   <AdminDashboard />
+ * </ProtectedRoute>
+ * 
+ * @param children - The components to render if the user is authenticated and authorized.
+ * @param notAuthNavigateTo - The route to navigate to if the user is not authenticated (default: "/").
+ * @param notUserNavigateTo - The route to navigate to if the user is authenticated but not authorized (default: "/").
+ * @param allowedFor - An array of user types that are allowed to access the children. If it includes "all", any authenticated user can access.
+ * 
+ * @returns The protected route component.
+ */
 export function ProtectedRoute({ 
   children,
   notAuthNavigateTo = "/",

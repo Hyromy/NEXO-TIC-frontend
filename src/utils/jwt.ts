@@ -1,5 +1,10 @@
+/**
+ * Decodes a JWT (JSON Web Token) and returns its payload.
+ * 
+ * @param token - The JWT to decode.
+ * @returns The decoded payload or null if decoding fails.
+ */
 export function decodeJWT(token: string): any {
-  // Early validation - these are expected cases, no need to log
   if (!token || typeof token != 'string') return null
   
   const parts = token.split('.')
@@ -19,16 +24,21 @@ export function decodeJWT(token: string): any {
     return JSON.parse(jsonPayload)
 
   } catch (error) {
-    // Invalid base64 or JSON - expected for malformed tokens, no need to log
     return null
   }
 }
 
+/**
+ * Checks if a JWT (JSON Web Token) is expired.
+ * 
+ * @param token - The JWT to check.
+ * @param bufferSeconds - The buffer time in seconds to consider the token as expired.
+ * @returns True if the token is expired, false otherwise.
+ */
 export function isTokenExpired(token: string, bufferSeconds: number = 5): boolean {
   if (!token) return true
   
   const decoded = decodeJWT(token)
-  // If we can't decode the token, assume it's valid and let the server validate it
   if (!decoded) return false
   if (!decoded.exp) return true
   
@@ -36,6 +46,12 @@ export function isTokenExpired(token: string, bufferSeconds: number = 5): boolea
   return decoded.exp - bufferSeconds < now
 }
 
+/**
+ * Retrieves the remaining time for a JWT (JSON Web Token) to expire.
+ * 
+ * @param token - The JWT to check.
+ * @returns The remaining time in seconds or 0 if the token is invalid or expired.
+ */
 export function getTokenRemainingTime(token: string): number {
   if (!token) return 0
   
