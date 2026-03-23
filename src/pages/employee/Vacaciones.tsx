@@ -15,6 +15,7 @@ import {
   vacationRequestService,
   vacationDetailService,
 } from "../../services/nexotic";
+import { useNavigate } from "react-router-dom";
 
 interface TarjetaData {
   titulo: string;
@@ -46,6 +47,7 @@ export default function Vacaciones() {
   const { execute, data } = useApi<any>();
   const { execute: executeRequests, data: dataRequests } = useApi<any>();
   const { execute: executeDetails, data: dataDetails } = useApi<any>();
+ 
 
   useEffect(() => {
     execute(vacationService.get());
@@ -157,11 +159,12 @@ function TarjetasVacaciones({ data }: { data: TarjetaData[] }) {
 }
 
 function BotonSolicitar() {
+const navigate = useNavigate();
   return (
     <div>
       <Button
         variant="primary"
-        onClick={() => alert("¿Quieres solicitar vacaciones?")}
+       onClick={() => navigate("/requests")}
       >
         Solicitar Vacaciones
       </Button>
