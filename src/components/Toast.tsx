@@ -15,6 +15,21 @@ type ToastProps = {
   variant?: variants
   header?: ReactNode
 }
+/**
+ * Toast component to display a notification.
+ *
+ * @example
+ * <Toast id="my-toast">
+ *   <p>Hello, world!</p>
+ * </Toast>
+ *
+ * @param id - The unique identifier for the toast.
+ * @param children - The content to be displayed in the toast.
+ * @param autohide - Whether the toast should automatically hide. Default is true.
+ * @param delay - The delay before the toast automatically hides. Default is 5000.
+ * @param variant - The color variant of the toast. Default is "primary".
+ * @param header - The header content for the toast. Default is undefined.
+ */
 export function Toast({
   id,
   children,
@@ -83,6 +98,19 @@ type ToastContainerProps = {
   children: ReactNode
   position?: "top-start" | "top-center" | "top-end" | "middle-start" | "middle-center" | "middle-end" | "bottom-start" | "bottom-center" | "bottom-end"
 }
+/**
+ * Toast container component to hold and position toasts.
+ * 
+ * @example
+ * <ToastContainer>
+ *   <Toast id="my-toast">
+ *     <p>Hello, world!</p>
+ *   </Toast>
+ * </ToastContainer>
+ * 
+ * @param children - The toast components to be displayed inside the container.
+ * @param position - The position of the toast container on the screen. Default is "bottom-end".
+ */
 export function ToastContainer({
   children,
   position = "bottom-end"
@@ -94,12 +122,28 @@ export function ToastContainer({
   )
 }
 
+/**
+ * Function to programmatically show a toast by its id.
+ * 
+ * @example
+ * showToast("my-toast")
+ * 
+ * @param id - The unique identifier of the toast to be shown.
+ */
 export function showToast(id: string) {
   const el = document.getElementById(id)
   if (!el) throw new Error(`Toast with id "${id}" not found`)
   BSToast.getOrCreateInstance(el).show()
 }
 
+/**
+ * Function to programmatically hide a toast by its id.
+ * 
+ * @example
+ * hideToast("my-toast")
+ * 
+ * @param id - The unique identifier of the toast to be hidden.
+ */
 export function hideToast(id: string) {
   const el = document.getElementById(id)
   if (!el) throw new Error(`Toast with id "${id}" not found`)
