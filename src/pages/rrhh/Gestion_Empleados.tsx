@@ -38,6 +38,7 @@ import {
 import { isEmail, isPhone } from "../../utils/validator"
 import { Card } from "../../components/Card"
 import { Badge } from "../../components/Badge"
+import { Alert, launchAlert } from "../../components/Alert"
 
 const newEmployeeModalId = "add-employee-modal"
 const deleteEmployeeModalId = "delete-employee-modal"
@@ -163,8 +164,12 @@ export default function Gestion_Empleados() {
     }
 
     if (error) {
-      alert('Error: ' + error)
-      console.error('Error:', error)
+      launchAlert("main-float-container",
+        <Alert icon="error" type="danger">
+          Ocurrió un error al cargar los datos. Intenta recargar la página.
+        </Alert>
+      )
+      console.error('Error on main component:', error)
     }
   }, [data, error])
 
@@ -347,8 +352,12 @@ function DetailsView ({
       })
     }
     if (error) {
-      alert('Error: ' + error)
-      console.error('Error:', error)
+      launchAlert("main-float-container",
+        <Alert icon="error" type="danger">
+          Ocurrió un error al cargar los datos. Intenta recargar la página.
+        </Alert>
+      )
+      console.error('Error on details component:', error)
     }
   }, [data, error, employee?.id, records])
 
@@ -592,7 +601,11 @@ function NewEmployeeModal ({
   const onSubmit = async (fd: newEmployeeExpectedData) => {
     const validation = validate(fd)
     if (validation != "ok") {
-      return alert(validation)
+      return launchAlert("main-float-container",
+        <Alert icon="warning" type="warning">
+          {validation}
+        </Alert>
+      )
     }
 
     const modalElement = document.getElementById(newEmployeeModalId)
@@ -663,7 +676,11 @@ function NewEmployeeModal ({
         ? "Empleado actualizado exitosamente."
         : "Empleado registrado exitosamente. El empleado recibirá un correo para configurar su cuenta."
 
-      alert(successMessage)
+      launchAlert("main-float-container",
+        <Alert icon="success" type="success">
+          {successMessage}
+        </Alert>
+      )
       refreshData()
       closeModal(newEmployeeModalId)
       setSubmittedMode(null)
@@ -671,8 +688,12 @@ function NewEmployeeModal ({
     }
 
     if (error) {
-      alert('Error: ' + error)
-      console.error('Error:', error)
+      launchAlert("main-float-container",
+        <Alert icon="error" type="danger">
+          Ocurrió un error al cargar los datos. Intenta recargar la página.
+        </Alert>
+      )
+      console.error('Error on new modal component:', error)
       setSubmittedMode(null)
     }
   }, [data, error, submittedMode, refreshData])
@@ -789,7 +810,11 @@ function DeleteEmployeeModal ({
   const onSubmit = (data: expectedData) => {
     const validation = validate(data)
     if (validation != "ok") {
-      return alert(validation)
+      return launchAlert("main-float-container",
+        <Alert icon="warning" type="warning">
+          {validation}
+        </Alert>
+      )
     }
 
     execute(
@@ -806,8 +831,12 @@ function DeleteEmployeeModal ({
       console.log("Empleado eliminado:", data)
     }
     if (error) {
-      alert('Error: ' + error)
-      console.error('Error:', error)
+      launchAlert("main-float-container",
+        <Alert icon="error" type="danger">
+          Ocurrió un error al eliminar al empleado. Intenta nuevamente.
+        </Alert>
+      )
+      console.error('Error on delete modal component:', error)
     }
   }, [data, error])
 
