@@ -46,7 +46,9 @@ import {
   Option,
   Check,
   Radio,
-  Range
+  Range,
+  mapObjectToFormValues,
+  setFormValues,
 } from "../components/Form"
 import { List, ListItem } from "../components/List"
 import { Modal, openModal, closeModal } from "../components/Modal"
@@ -572,6 +574,79 @@ describe("Components package", () => {
       
       await user.click(screen.getByRole('button'))
       expect(handleSubmit).toHaveBeenCalled()
+    })
+
+    it('mapObjectToFormValues should map nested paths and transforms', () => {
+      const source = {
+        user: {
+          first_name: 'Jane',
+          email: 'jane@nexotic.com',
+        },
+        meta: {
+          roleId: 7,
+        }
+      }
+
+      const result = mapObjectToFormValues(source, {
+        name: 'user.first_name',
+        email: {
+          path: 'user.email',
+          transform: (value) => String(value).replace('@nexotic.com', ''),
+        },
+        role: {
+          path: 'meta.roleId',
+          transform: (value) => `role-${value}`,
+        }
+      }, {
+        name: '',
+        email: '',
+        role: '',
+      })
+
+      expect(result).toEqual({
+        name: 'Jane',
+        email: 'jane',
+        role: 'role-7',
+      })
+    })
+
+    it('mapObjectToFormValues should fallback to defaults when source is null or value is missing', () => {
+      const result = mapObjectToFormValues(null, {
+        name: 'user.first_name',
+        phone: 'phone',
+      }, {
+        name: 'Default Name',
+        phone: '0000000',
+      })
+
+      expect(result).toEqual({
+        name: 'Default Name',
+        phone: '0000000',
+      })
+    })
+
+    it('setFormValues should populate existing input/select/textarea elements by name', () => {
+      const form = document.createElement('form')
+      form.innerHTML = `
+        <input name="name" />
+        <select name="department"><option value="1">HR</option><option value="2">IT</option></select>
+        <textarea name="notes"></textarea>
+      `
+
+      setFormValues(form, {
+        name: 'John',
+        department: '2',
+        notes: 'Hello world',
+        nonExistent: 'ignored',
+      })
+
+      const input = form.querySelector('input[name="name"]') as HTMLInputElement
+      const select = form.querySelector('select[name="department"]') as HTMLSelectElement
+      const textarea = form.querySelector('textarea[name="notes"]') as HTMLTextAreaElement
+
+      expect(input.value).toBe('John')
+      expect(select.value).toBe('2')
+      expect(textarea.value).toBe('Hello world')
     })
   })
 

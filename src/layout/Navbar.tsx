@@ -68,7 +68,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="navbar bg-body-tertiary navbar-expand-sm px-0 sticky-top">
+      <nav className="navbar bg-body-tertiary navbar-expand-sm px-0 sticky-top border-bottom">
         <div className="container-xxl d-flex justify-content-between align-items-center">
           <button
             className="btn d-md-none mx-2 p-0"
@@ -154,7 +154,7 @@ function ThisModal({ id }: { id: string }) {
   return (
     <Modal 
       id={id}
-      header={<h1 className="modal-title fs-5" id={id + "Label"}>Cambiar contraseña</h1>}
+      header={<span className="fs-3">Cambiar contraseña</span>}
       isStatic
       size="sm"
     >
