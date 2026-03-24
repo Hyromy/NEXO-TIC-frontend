@@ -67,7 +67,7 @@ export default function Solicitudes() {
 
       try {
         // Buscamos al empleado usando el servicio
-        const empRes = await fetchData(employeeService.getByUser(userId));
+        const empRes = await fetchData(employeeService.get(userId));
         const employee = Array.isArray(empRes) ? empRes[0] : empRes;
 
         if (employee) {
