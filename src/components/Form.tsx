@@ -6,7 +6,7 @@ import {
 import { getDataFromForm } from "../utils/getters"
 
 type size = "sm" | "lg"
-type textType = "text" | "password" | "area"
+type textType = "text" | "password" | "area" | "number"
 type formLabelType = "label" | "check"
 
 const formSizes = (size: size) => {
@@ -40,6 +40,68 @@ type FormProps = {
   children: ReactNode
   onSubmit: (data: any) => void
 }
+type TransformFn = (value: unknown) => string
+
+type FieldMapperConfig = {
+  path: string
+  transform?: TransformFn
+}
+
+export type FieldMapper = Record<string, string | FieldMapperConfig>
+
+const toStringValue = (value: unknown) => {
+  if (value == null) return ""
+  return String(value)
+}
+
+const getByPath = (source: unknown, path: string): unknown => {
+  if (!source || !path) return undefined
+
+  return path
+    .split(".")
+    .reduce<unknown>((acc, key) => {
+      if (acc == null || typeof acc !== "object") return undefined
+      return (acc as Record<string, unknown>)[key]
+    }, source)
+}
+
+export const mapObjectToFormValues = <T extends object>(
+  source: T | null,
+  mapper: FieldMapper,
+  defaults: Record<string, string> = {}
+) => {
+  const values: Record<string, string> = { ...defaults }
+
+  for (const fieldName of Object.keys(mapper)) {
+    const config = mapper[fieldName]
+    const path = typeof config === "string" ? config : config.path
+    const transform = typeof config === "string"
+      ? toStringValue
+      : config.transform || toStringValue
+
+    const rawValue = source ? getByPath(source, path) : undefined
+    values[fieldName] = rawValue == null ? (defaults[fieldName] || "") : transform(rawValue)
+  }
+
+  return values
+}
+
+export const setFormValues = (
+  form: HTMLFormElement,
+  values: Record<string, string>
+) => {
+  for (const fieldName of Object.keys(values)) {
+    const element = form.querySelector(`[name='${fieldName}']`) as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+      | null
+
+    if (!element) continue
+    element.value = values[fieldName]
+  }
+}
+
 /**
  * Form component that wraps a form element and provides a way to handle form submission. It prevents the default form submission behavior and instead calls the `onSubmit` prop with the form data as an object. The form data is extracted using the `getDataFromForm` utility function, which converts the FormData into a plain object.
  * 
@@ -339,6 +401,8 @@ export function Option({
 type SelectProps = {
   name: string
   options: (OptionProps | ReactNode)[]
+  label?: string
+  id?: string
   size?: size
   window?: number
   value?: string
@@ -368,13 +432,15 @@ type SelectProps = {
 export function Select({
   name,
   options,
+  label,
+  id = `select-${name}`,
   size,
   window,
   value,
   disabled,
   onChange
 }: SelectProps) {
-  return (
+  const selectContent = (
     <select
       className={`form-select ${formSizes(size!)}`}
       name={name}
@@ -392,6 +458,13 @@ export function Select({
         return <Option key={ index} value={value} {...rest} />
       })}
     </select>
+  )
+
+  return (
+    <>
+      {textFieldLabelContent(label!, id)}
+      {selectContent}
+    </>
   )
 }
 
