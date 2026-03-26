@@ -1,6 +1,6 @@
-import { api } from "./api"
+import { api } from "./api";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/'
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/";
 
 /**
  * Generates a URL parameter string for a request ID if it is a valid positive integer.
@@ -49,7 +49,7 @@ export const userService = {
     api.get(userService.endpoint + param(id))
   ),
 
-  create: (data: {username: string, password: string}) => (
+  create: (data: { username: string, password: string }) => (
     api.post(userService.endpoint, data)
   ),
 }
@@ -62,50 +62,68 @@ export const userService = {
 export const authService = {
   endpoint: API_URL + "auth/",
 
-  login: (username: string, password: string) => (
+  login: (username: string, password: string) =>
     api.post(
       authService.endpoint + "login/",
       {
         username,
         password,
       },
-      true
-    )
-  ),
+      true,
+    ),
 
   refresh: (refreshToken?: string) => {
-    if (!refreshToken) return null
+    if (!refreshToken) return null;
     return api.post(authService.endpoint + "refresh/", {
       refresh: refreshToken,
-    })
+    });
   },
 
-  signup: (username: string, email: string) => (
+  signup: (username: string, email: string) =>
     api.post(authService.endpoint + "signup/", {
       username,
       email,
-    })
-  ),
+    }),
 
-  recover: (username: string, email: string) => (
+  recover: (username: string, email: string) =>
     api.post(authService.endpoint + "recover/", {
       username,
       email,
-    })
-  ),
+    }),
 
-  logout: (refresh: string) => (
+  logout: (refresh: string) =>
     api.post(authService.endpoint + "logout/", {
       refresh,
-    })
-  ),
+    }),
 
-  changePassword: (new_password: string) => (
+  changePassword: (new_password: string) =>
     api.post(authService.endpoint + "reset-password/", {
       new_password,
-    })
-  ),
-}
+    }),
+};
+
+export const vacationService = {
+  endpoint: API_URL + "vacation-periods/",
+  get: (id: number = 0) => api.get(vacationService.endpoint + param(id)),
+};
+
+export const vacationRequestService = {
+  endpoint: API_URL + "vacation-requests/",
+  get: (id: number = 0) => api.get(vacationRequestService.endpoint + param(id)),
+  create: (data: any) => api.post(vacationRequestService.endpoint, data),
+};
+
+export const vacationDetailService = {
+  endpoint: API_URL + "vacation-details/",
+  get: (id: number = 0) => api.get(vacationDetailService.endpoint + param(id)),
+  create: (data: any) => api.post(vacationDetailService.endpoint, data),
+};
+
+export const vacationPeriodService = {
+  endpoint: API_URL + "vacation-periods/",
+  getByEmployee: (employeeId: number) =>
+    api.get(`${vacationPeriodService.endpoint}?employee=${employeeId}`),
+};
 
 export type employee = {
   id: id,
@@ -318,5 +336,56 @@ export const vacationApprovalsService = {
 
   get: (id: number = 0): Promise<vacationApproval[] | vacationApproval> => (
     api.get(vacationApprovalsService.endpoint + param(id))
+  ),
+}
+
+export type announcement = {
+  id: id,
+  title: string,
+  content: string,
+  date: string,
+  priority: string,
+  enabled: boolean,
+  author: id,
+}
+
+export const announcementsService = {
+  endpoint: API_URL + "announcements/",
+
+  get: (id: number = 0): Promise<announcement[] | announcement> => (
+    api.get(announcementsService.endpoint + param(id))
+  ),
+
+  create: (data: { title: string, content: string, priority: string, author: number }) => (
+    api.post(announcementsService.endpoint, data)
+  ),
+}
+
+export type incidentJustification = {
+  id: id,
+  reason: string,
+  evidence: string,
+  date: string,
+  status: string,
+  notes: string,
+  enabled: boolean,
+  incident: id,
+}
+
+export const incidentJustificationService = {
+  endpoint: API_URL + "incident-justifications/",
+
+  get: (id: number = 0): Promise<incidentJustification[] | incidentJustification> => (
+    api.get(incidentJustificationService.endpoint + param(id))
+  ),
+
+  create: (data: { 
+    reason: string, 
+    evidence: string, 
+    status: string, 
+    incident: number, 
+    notes: string 
+  }) => (
+    api.post(incidentJustificationService.endpoint, data)
   ),
 }

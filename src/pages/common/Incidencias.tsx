@@ -1,12 +1,18 @@
 import Main from "../../layout/Main"
-
 import { Button } from "../../components/Button"
 import { Table } from "../../components/Table"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ColContainer, RowContainer, StackContainer } from "../../layout/Containers"
 import { Form, TextField } from "../../components/Form"
 import { Card } from "../../components/Card"
 import { Alert, launchAlert } from "../../components/Alert"
+import useApi from "../../hooks/useApi"
+import { decodeJWT } from "../../utils/jwt"
+import { getAccessToken } from "../../utils/getters"
+import { 
+  incidentsService, 
+  employeeService, 
+} from "../../services/nexotic"
 
 const defaultGap = 4
 const maxEvidences = 2
@@ -60,12 +66,38 @@ type IndicentsHistoryProps = {
 function IndicentsHistory({
   goToJustify
 }: IndicentsHistoryProps) {
-  const incidents: IncidentOBJ[] = [
-    {id: 1, dateTime: new Date(2026, 3, 9, 12, 36, 34), type: "Entrada tardía", status: "Pendiente"},
-    {id: 2, dateTime: new Date(2026, 2, 23, 0, 0, 46), type: "Dia económico", status: "Justificado"},
-    {id: 3, dateTime: new Date(2025, 1, 10, 14, 25, 12), type: "Entrada tardía", status: "No justificado"},
-    {id: 4, dateTime: new Date(2025, 7, 19, 0, 0, 8), type: "Vacaciones", status: "Justificado"},
-  ]
+  const { execute: fetchData } = useApi<any>()
+  const [incidents, setIncidents] = useState<IncidentOBJ[]>([])
+
+  const token = getAccessToken()
+  const decoded: any = token ? decodeJWT(token) : null
+  const userId = decoded?.user_id
+
+  useEffect(() => {
+    const loadIncidents = async () => {
+      if (!userId) return
+      try {
+        const empRes = await fetchData(employeeService.get(userId))
+        const employee = Array.isArray(empRes) ? empRes[0] : empRes
+
+        if (employee) {
+          const res = await fetchData(incidentsService.get())
+          if (Array.isArray(res)) {
+            const mapped = res
+              .filter((i: any) => i.employee === employee.id)
+              .map((i: any) => ({
+                id: i.id,
+                dateTime: new Date(i.date),
+                type: i.type,
+                status: i.justified 
+              }))
+            setIncidents(mapped)
+          }
+        }
+      } catch (e) { console.error(e) }
+    }
+    loadIncidents()
+  }, [userId, fetchData])
 
   const sortByDate = (a: IncidentOBJ, b: IncidentOBJ) => (
     b.dateTime.getTime() - a.dateTime.getTime()
@@ -138,7 +170,7 @@ function NewIncident({
     const cells: any[] = []
     for (let i = 0; i < maxEvidences; i++) {
       cells.push(evidences[i] != null
-        ? <Card>Evidencia</Card>
+        ? <Card key={i}>Evidencia</Card>
         : null
       )
     }
@@ -180,7 +212,7 @@ function NewIncident({
       <Button variant="secondary" onClick={goBack} h_padding={5}>Volver</Button>
       <Table
         headers={["ID", "Fecha", "Hora", "Tipo"]}
-        rows={[incident] as IncidentOBJ[]}
+        rows={incident ? [incident] : []}
         trDrawer={drawer}
       />
       <h3>Motivo de justificación</h3>

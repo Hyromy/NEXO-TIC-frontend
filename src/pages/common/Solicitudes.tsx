@@ -1,18 +1,33 @@
-import Main from "../../layout/Main"
-import Progress from "../../components/Progress"
-import { Button } from "../../components/Button"
-import { ColContainer, RowContainer, StackContainer } from "../../layout/Containers"
-import { useEffect, useState } from "react"
-import { Select, Option } from "../../components/Form"
-import { Card } from "../../components/Card"
-import { List } from "../../components/List"
-import { Accordion } from "../../components/Accordion"
+import Main from "../../layout/Main";
+import Progress from "../../components/Progress";
+import { Button } from "../../components/Button";
+import {
+  ColContainer,
+  RowContainer,
+  StackContainer,
+} from "../../layout/Containers";
+import { useEffect, useState } from "react";
+import { Select, Option } from "../../components/Form";
+import { Card } from "../../components/Card";
+import { List } from "../../components/List";
+import { Accordion } from "../../components/Accordion";
+import { useNavigate } from "react-router-dom";
+import useApi from "../../hooks/useApi";
+import {
+  vacationRequestService,
+  vacationDetailService,
+  vacationService,
+  employeeService,
+} from "../../services/nexotic";
+import { getAccessToken } from "../../utils/getters";
+import { decodeJWT } from "../../utils/jwt";
+
 import { Alert, launchAlert } from "../../components/Alert"
 
-const defaultHorizontalPadding = 5
-const defaultGap = 4
-const defaultMinStep = 0
-const defaultMaxStep = 2
+const defaultHorizontalPadding = 5;
+const defaultGap = 4;
+const defaultMinStep = 0;
+const defaultMaxStep = 2;
 
 const defaultState = {
   step: defaultMinStep,
@@ -20,37 +35,129 @@ const defaultState = {
   data: {
     typeRequest: "",
     schedule: [],
-  }
-}
+  },
+};
 
 type RequestData = {
-  typeRequest: string
-  schedule: string[]
-}
+  typeRequest: string;
+  schedule: string[];
+};
 
 type StepViewProps = {
-  onReady: (fields: Partial<RequestData>) => void
-}
+  onReady: (fields: Partial<RequestData>) => void;
+};
 
 export default function Solicitudes() {
-  const [step, setStep] = useState(defaultState.step)
-  const [canContinue, setCanContinue] = useState(defaultState.canContinue)
-  const [data, setData] = useState<RequestData>(defaultState.data)
+  const navigate = useNavigate();
+  const [step, setStep] = useState(defaultState.step);
+  const [canContinue, setCanContinue] = useState(defaultState.canContinue);
+  const [data, setData] = useState<RequestData>(defaultState.data);
+  const [availableDays, setAvailableDays] = useState(0);
+  const [realEmployeeId, setRealEmployeeId] = useState<number | null>(null);
+
+  const { execute: createRequest } = useApi<any>();
+  const { execute: createDetail } = useApi<any>();
+
+  // Instancia para carga de datos iniciales
+  const { execute: fetchData } = useApi<any>();
+  const token = getAccessToken();
+  const decoded: any = token ? decodeJWT(token) : null;
+  const userId = decoded?.user_id;
+  useEffect(() => {
+    const loadInitialData = async () => {
+      if (!userId) return;
+
+      try {
+        // Buscamos al empleado usando el servicio
+        const empRes = await fetchData(employeeService.get(userId));
+        const employee = Array.isArray(empRes) ? empRes[0] : empRes;
+
+        if (employee) {
+          setRealEmployeeId(employee.id);
+          const periodRes = await fetchData(vacationService.get());
+          if (periodRes && periodRes.length > 0) {
+            const currentPeriod =
+              periodRes.find((p: any) => p.employee === employee.id) ||
+              periodRes[0];
+            setAvailableDays(currentPeriod.days_remaining || 0);
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar datos iniciales:", error);
+      }
+    };
+
+    loadInitialData();
+  }, [userId, fetchData]);
 
   const updateData = (newData: Partial<RequestData>) => {
     setData((prevData) => ({
       ...prevData,
       ...newData,
-    }))
-  }
+    }));
+  };
 
   const changeStep = (newStep: boolean) => {
-    const convertStep = newStep ? 1 : -1
-    const currentStep = step + convertStep
-    if (defaultMinStep > currentStep || currentStep > defaultMaxStep) return
-    setCanContinue(false)
-    setStep(currentStep)
-  }
+    const convertStep = newStep ? 1 : -1;
+    const currentStep = step + convertStep;
+    if (defaultMinStep > currentStep || currentStep > defaultMaxStep) return;
+    setCanContinue(false);
+    setStep(currentStep);
+  };
+  const handleSend = async () => {
+    if (!realEmployeeId) {
+      alert("No se pudo identificar su perfil de empleado.");
+      return;
+    }
+
+    try {
+      const request = await createRequest(
+        vacationRequestService.create({
+          status: "pending",
+          employee: realEmployeeId,
+        }),
+      );
+
+      console.log("Respuesta de Solicitud Creada:", request); //
+
+      if (!request || request.error) {
+        alert(
+          "Error al crear la solicitud: " +
+            (request?.message || "Servidor no responde"),
+        );
+        return;
+      }
+
+      const requestId = request.id;
+      for (const day of data.schedule) {
+        // Formatear a YYYY-MM-DD
+        const dateObj = new Date(day);
+        const formattedDate = dateObj.toISOString().split("T")[0];
+
+        console.log(
+          `Enviando día: ${formattedDate} para solicitud ID: ${requestId}`,
+        );
+
+        const detailRes = await createDetail(
+          vacationDetailService.create({
+            selected_day: formattedDate,
+            vacation_request: requestId,
+          }),
+        );
+
+        if (detailRes && detailRes.error) {
+          console.error("RESPUESTA DEL SERVIDOR:", detailRes);
+          alert("Error en el día " + formattedDate + ": " + detailRes.message);
+        }
+      }
+
+      alert("¡Solicitud enviada con éxito! ✅\nRevisa tu historial.");
+      navigate("/holidays");
+    } catch (e) {
+      console.error("Error fatal:", e);
+      alert("Ocurrió un error inesperado.");
+    }
+  };
 
   const renderStep = () => {
     switch (step) {
@@ -59,21 +166,22 @@ export default function Solicitudes() {
           <RequestType
             typeRequest={data.typeRequest}
             onReady={(fields) => {
-              updateData(fields)
-              setCanContinue(fields.typeRequest != "")
+              updateData(fields);
+              setCanContinue(fields.typeRequest != "");
             }}
           />
-        )
+        );
       case 1:
         return (
-          <Schedule 
+          <Schedule
             schedule={data.schedule}
+            availableDays={availableDays}
             onReady={(fields) => {
-              updateData(fields)
-              setCanContinue((fields.schedule?.length ?? 0) > 0)
+              updateData(fields);
+              setCanContinue((fields.schedule?.length ?? 0) > 0);
             }}
           />
-        )
+        );
       case 2:
         return (
           <Summary
@@ -81,17 +189,16 @@ export default function Solicitudes() {
             schedule={data.schedule}
             onReady={() => {
               setCanContinue(
-                (data.schedule?.length ?? 0) > 0
-                && data.typeRequest != ""
-              )
+                (data.schedule?.length ?? 0) > 0 && data.typeRequest != "",
+              );
             }}
           />
-        )
+        );
     }
-  }
+  };
 
-  const isStart = step <= defaultMinStep
-  const isEnd = step >= defaultMaxStep
+  const isStart = step <= defaultMinStep;
+  const isEnd = step >= defaultMaxStep;
 
   return (
     <Main>
@@ -148,21 +255,18 @@ export default function Solicitudes() {
         />
       </StackContainer>
     </Main>
-  )
+  );
 }
 
 type RequestTypeProps = StepViewProps & {
-  typeRequest: string
-}
-function RequestType({
-  typeRequest,
-  onReady
-}: RequestTypeProps) {
-  const [localType, setLocalType] = useState(typeRequest)
+  typeRequest: string;
+};
+function RequestType({ typeRequest, onReady }: RequestTypeProps) {
+  const [localType, setLocalType] = useState(typeRequest);
 
   useEffect(() => {
-    if (localType) onReady({ typeRequest: localType })
-  }, [])
+    if (localType) onReady({ typeRequest: localType });
+  }, []);
 
   const options = [
     <Option key="1" text="Seleccione un tipo de solicitud" value="" disabled />,
@@ -171,14 +275,16 @@ function RequestType({
     <Option key="4" text="Dia económico" value="economicDay" />,
     <Option key="5" text="Salida anticipada" value="earlyExit" />,
     <Option key="6" text="Incapacidad medica" value="medicalIncapacity" />,
-    <Option key="7" text="Permiso por maternidad / paternidad" value="parentalLeave" />,
-  ]
-
+    <Option
+      key="7"
+      text="Permiso por maternidad / paternidad"
+      value="parentalLeave"
+    />,
+  ];
   const handleTypeChange = (value: string) => {
-    setLocalType(value)
-    if (value) onReady({ typeRequest: value })
-  }
-
+    setLocalType(value);
+    if (value) onReady({ typeRequest: value });
+  };
   return (
     <>
       <h2>Registro de tipo de solicitud</h2>
@@ -190,49 +296,43 @@ function RequestType({
         onChange={handleTypeChange}
       />
     </>
-  )
+  );
 }
 
 type ScheduleProps = StepViewProps & {
-  schedule: string[]
-}
-function Schedule({
-  schedule,
-  onReady
-}: ScheduleProps) {
-  const [localSchedule, setLocalSchedule] = useState(schedule)
+  schedule: string[];
+  availableDays?: number;
+};
+function Schedule({ schedule, onReady, availableDays = 0 }: ScheduleProps) {
+  const [localSchedule, setLocalSchedule] = useState(schedule);
 
   useEffect(() => {
-    if (localSchedule.length > 0) onReady({ schedule: localSchedule })
-  }, [])
+    if (localSchedule.length > 0) onReady({ schedule: localSchedule });
+  }, []);
 
-  const availableDays = 4
-
-  const canAddMore = localSchedule.length < availableDays
-  const canRemove = localSchedule.length > 0
+  const canAddMore = localSchedule.length < availableDays;
+  const canRemove = localSchedule.length > 0;
 
   const addDay = (day: string) => {
-    if (!canAddMore) return
-    const newSchedule = [...localSchedule, day]
-    setLocalSchedule(newSchedule)
-    onReady({ schedule: newSchedule })
-  }
+    if (!canAddMore) return;
+    const newSchedule = [...localSchedule, day];
+    setLocalSchedule(newSchedule);
+    onReady({ schedule: newSchedule });
+  };
 
   const removeDay = (day: string) => {
-    if (!canRemove) return
-    const newSchedule = localSchedule.filter(d => d != day)
-    setLocalSchedule(newSchedule)
-    onReady({ schedule: newSchedule })
-  }
+    if (!canRemove) return;
+    const newSchedule = localSchedule.filter((d) => d != day);
+    setLocalSchedule(newSchedule);
+    onReady({ schedule: newSchedule });
+  };
 
   return (
     <>
       <h2>Horario</h2>
       <RowContainer gap={defaultGap}>
         <ColContainer defaultSize={12} md={6} xl={4}>
-          <Card header={"Dias seleccionados"}>
-            {localSchedule.length}
-          </Card>
+          <Card header={"Dias seleccionados"}>{localSchedule.length}</Card>
         </ColContainer>
         <ColContainer defaultSize={12} md={6} xl={4}>
           <Card header={"Dias restantes"}>
@@ -261,34 +361,35 @@ function Schedule({
         </ColContainer>
       </RowContainer>
     </>
-  )
+  );
 }
 
 type SummaryProps = StepViewProps & {
-  typeRequest: string
-  schedule: string[]
-}
-function Summary({
-  typeRequest,
-  schedule,
-  onReady
-}: SummaryProps) {
+  typeRequest: string;
+  schedule: string[];
+};
+function Summary({ typeRequest, schedule, onReady }: SummaryProps) {
   useEffect(() => {
-    onReady({ typeRequest, schedule })
-  }, [])
+    onReady({ typeRequest, schedule });
+  }, []);
 
   const items = [
     `Tipo de solicitud: ${typeRequest}`,
-    <Accordion items={[{
-      header: `Dias seleccionados: ${schedule.length}`,
-      body: <List flush items={schedule} />
-    }]} />,
-  ]
+    <Accordion
+      key="acc"
+      items={[
+        {
+          header: `Dias seleccionados: ${schedule.length}`,
+          body: <List flush items={schedule} />,
+        },
+      ]}
+    />,
+  ];
 
   return (
     <>
       <h2>Resumen de solicitud</h2>
       <List flush items={items} />
     </>
-  )
+  );
 }
