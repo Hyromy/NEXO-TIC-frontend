@@ -338,3 +338,54 @@ export const vacationApprovalsService = {
     api.get(vacationApprovalsService.endpoint + param(id))
   ),
 }
+
+export type announcement = {
+  id: id,
+  title: string,
+  content: string,
+  date: string,
+  priority: string,
+  enabled: boolean,
+  author: id,
+}
+
+export const announcementsService = {
+  endpoint: API_URL + "announcements/",
+
+  get: (id: number = 0): Promise<announcement[] | announcement> => (
+    api.get(announcementsService.endpoint + param(id))
+  ),
+
+  create: (data: { title: string, content: string, priority: string, author: number }) => (
+    api.post(announcementsService.endpoint, data)
+  ),
+}
+
+export type incidentJustification = {
+  id: id,
+  reason: string,
+  evidence: string,
+  date: string,
+  status: string,
+  notes: string,
+  enabled: boolean,
+  incident: id,
+}
+
+export const incidentJustificationService = {
+  endpoint: API_URL + "incident-justifications/",
+
+  get: (id: number = 0): Promise<incidentJustification[] | incidentJustification> => (
+    api.get(incidentJustificationService.endpoint + param(id))
+  ),
+
+  create: (data: { 
+    reason: string, 
+    evidence: string, 
+    status: string, 
+    incident: number, 
+    notes: string 
+  }) => (
+    api.post(incidentJustificationService.endpoint, data)
+  ),
+}
