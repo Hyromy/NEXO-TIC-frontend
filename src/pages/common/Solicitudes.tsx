@@ -106,8 +106,11 @@ export default function Solicitudes() {
   };
   const handleSend = async () => {
     if (!realEmployeeId) {
-      alert("No se pudo identificar su perfil de empleado.");
-      return;
+      return launchAlert("main-float-container",
+        <Alert type="danger" icon="error">
+          No se pudo identificar su perfil de empleado.
+        </Alert>,
+      )
     }
 
     try {
@@ -121,11 +124,11 @@ export default function Solicitudes() {
       console.log("Respuesta de Solicitud Creada:", request); //
 
       if (!request || request.error) {
-        alert(
-          "Error al crear la solicitud: " +
-            (request?.message || "Servidor no responde"),
-        );
-        return;
+        return launchAlert("main-float-container",
+          <Alert type="danger" icon="error">
+            Error al crear la solicitud: {request?.message || "Servidor no responde"}
+          </Alert>,
+        )
       }
 
       const requestId = request.id;
@@ -147,15 +150,27 @@ export default function Solicitudes() {
 
         if (detailRes && detailRes.error) {
           console.error("RESPUESTA DEL SERVIDOR:", detailRes);
-          alert("Error en el día " + formattedDate + ": " + detailRes.message);
+          return launchAlert("main-float-container",
+            <Alert type="danger" icon="error">
+              Error en el día {formattedDate}: {detailRes.message || "Servidor no responde"}
+            </Alert>,
+          )
         }
       }
 
-      alert("¡Solicitud enviada con éxito! ✅\nRevisa tu historial.");
+      launchAlert("main-float-container",
+        <Alert type="success" icon="success">
+          Solicitud enviada correctamente.
+        </Alert>,
+      )
       navigate("/holidays");
     } catch (e) {
       console.error("Error fatal:", e);
-      alert("Ocurrió un error inesperado.");
+      launchAlert("main-float-container",
+        <Alert type="danger" icon="error">
+          Ocurrió un error inesperado. Por favor, intenta de nuevo más tarde.
+        </Alert>,
+      )
     }
   };
 
