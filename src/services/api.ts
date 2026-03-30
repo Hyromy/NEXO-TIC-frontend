@@ -8,6 +8,20 @@ const REFRESH_ENDPOINT = API_URL + 'auth/refresh/'
 let isRefreshing = false
 let refreshPromise: Promise<boolean> | null = null
 
+/**
+ * Gets the common headers for API requests, including the authorization header if an access token is available.
+ * 
+ * @example 
+ * const headers = getCommonHeaders()
+ * console.log(headers)
+ * // Output might be: 
+ * // {
+ * //   'Content-Type': 'application/json',
+ * //   'Authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...'
+ * // }
+ * 
+ * @returns The common headers object.
+ */
 
 export type ApiResponse<T> = T | {
   error: true

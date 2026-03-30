@@ -1,6 +1,35 @@
 import { useState, useCallback } from "react"
 import type { ApiResponse } from "../services/api"
-
+/**
+ * Hook for managing API calls, including loading and error states.
+ * 
+ * This hook provides a standardized way to handle API calls in React components. It manages the loading state, captures any errors that occur during the API call, and stores the response data.
+ * 
+ * @example
+ * const { data, loading, error, execute } = useApi()
+ * 
+ * // Running an API call
+ * useEffect(() => {
+ *   execute(MyApi.getData())
+ * }, [])
+ *
+ * // Handling loading, error, and data states
+ * useEffect(() => {
+ *   if (loading) {
+ *     console.log('Loading data...')
+ *   }
+ *   if (error) {
+ *     console.error('Error fetching data:', error)
+ *   }
+ *   if (data) {
+ *     console.log('Data fetched successfully:', data)
+ *   }
+ * }, [loading, data, error])
+ * 
+ * @template T - The expected type of the API response data.
+ * 
+ * @returns An object containing the API response data, loading state, error message, and a function to execute the API call.
+ */
 export default function useApi<T>() {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
