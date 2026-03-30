@@ -1,5 +1,4 @@
-import { api } from "./api"
-import type {ApiResponse} from "./api"
+import { api, type ApiResponse } from "./api"
 
 import type { Employee } from "../types/Employee"
 import type { Department } from "../types/Department"
