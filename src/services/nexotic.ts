@@ -17,7 +17,7 @@ import type { VacationPeriod } from "../types/VacationPeriod"
 import type { IncidentJustification } from "../types/IncidentJustification"
 import type { User } from "../types/User"
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/'
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/";
 
 /**
  * Generates a URL parameter string for a request ID if it is a valid positive integer.
@@ -65,50 +65,68 @@ export const userService = {
 export const authService = {
   endpoint: API_URL + "auth/",
 
-  login: (username: string, password: string) => (
+  login: (username: string, password: string) =>
     api.post(
       authService.endpoint + "login/",
       {
         username,
         password,
       },
-      true
-    )
-  ),
+      true,
+    ),
 
   refresh: (refreshToken?: string) => {
-    if (!refreshToken) return null
+    if (!refreshToken) return null;
     return api.post(authService.endpoint + "refresh/", {
       refresh: refreshToken,
-    })
+    });
   },
 
-  signup: (username: string, email: string) => (
+  signup: (username: string, email: string) =>
     api.post(authService.endpoint + "signup/", {
       username,
       email,
-    })
-  ),
+    }),
 
-  recover: (username: string, email: string) => (
+  recover: (username: string, email: string) =>
     api.post(authService.endpoint + "recover/", {
       username,
       email,
-    })
-  ),
+    }),
 
-  logout: (refresh: string) => (
+  logout: (refresh: string) =>
     api.post(authService.endpoint + "logout/", {
       refresh,
-    })
-  ),
+    }),
 
-  changePassword: (new_password: string) => (
+  changePassword: (new_password: string) =>
     api.post(authService.endpoint + "reset-password/", {
       new_password,
-    })
-  ),
-}
+    }),
+};
+
+export const vacationService = {
+  endpoint: API_URL + "vacation-periods/",
+  get: (id: number = 0) => api.get(vacationService.endpoint + param(id)),
+};
+
+export const vacationRequestService = {
+  endpoint: API_URL + "vacation-requests/",
+  get: (id: number = 0) => api.get(vacationRequestService.endpoint + param(id)),
+  create: (data: any) => api.post(vacationRequestService.endpoint, data),
+};
+
+export const vacationDetailService = {
+  endpoint: API_URL + "vacation-details/",
+  get: (id: number = 0) => api.get(vacationDetailService.endpoint + param(id)),
+  create: (data: any) => api.post(vacationDetailService.endpoint, data),
+};
+
+export const vacationPeriodService = {
+  endpoint: API_URL + "vacation-periods/",
+  getByEmployee: (employeeId: number) =>
+    api.get(`${vacationPeriodService.endpoint}?employee=${employeeId}`),
+};
 
 
 // EMPLOYEES

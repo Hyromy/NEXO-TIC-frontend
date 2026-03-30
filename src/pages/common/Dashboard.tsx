@@ -1,7 +1,8 @@
 import Main from "../../layout/Main"
-
+import { useEffect, useState } from "react"
 import { Navigate } from "react-router-dom"
 import useUser from "../../hooks/useUser"
+import useApi from "../../hooks/useApi"
 import { Card } from "../../components/Card"
 import { List } from "../../components/List"
 import { Alert } from "../../components/Alert"
@@ -14,7 +15,15 @@ import {
 import type { ReactNode } from "react"
 
 import { type icons, type variants } from "../../components/variants"
-import { getHumanName } from "../../utils/getters"
+import { getHumanName, getAccessToken } from "../../utils/getters"
+import { decodeJWT } from "../../utils/jwt"
+import {
+  vacationService,
+  vacationRequestsService,
+  employeeService,
+  announcementsService,
+  incidentsService
+} from "../../services/nexotic"
 
 const defaultHeight = 192
 const defaultPadding = 2
@@ -151,21 +160,74 @@ type IndicentObject = {
   title: string
   date: string
 }
-function EmployeeDashboard() {
-  const pendingHolidays = 4
-  const pendingRequests = [
-    "Solicitud de permiso 1",
-    "Solicitud de permiso 2",
-  ]
-  const notices: AlertObject[] = [
-    { icon: "info", children: "Información importante", variant: "info" },
-    { icon: "warning", children: "Advertencia", variant: "warning" },
-    { icon: "warning", children: "Advertencia", variant: "warning" },
-  ]
-  const incidents: IndicentObject[] = [
-    { title: "Incidente 1", date: "2023-01-01" },
-    { title: "Incidente 2", date: "2023-01-02" },
-  ]
+
+function EmployeeDashboard() {  
+  const { execute: fetchData } = useApi<any>()
+  const [pendingHolidays, setPendingHolidays] = useState(0)
+  const [pendingRequests, setPendingRequests] = useState<string[]>([])
+  const [notices, setNotices] = useState<AlertObject[]>([])
+  const [incidents, setIncidents] = useState<IndicentObject[]>([])
+
+  const token = getAccessToken()
+  const decoded: any = token ? decodeJWT(token) : null
+  const userId = decoded?.user_id
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!userId) return
+      try {
+        const empRes = await fetchData(employeeService.get(userId))
+        const employee = Array.isArray(empRes) ? empRes[0] : empRes
+        if (employee) {
+          const periodRes = await fetchData(vacationService.get())
+          const myPeriod = Array.isArray(periodRes) 
+            ? periodRes.find((p: any) => p.employee === employee.id)
+            : null
+          setPendingHolidays(myPeriod?.days_remaining || 0)
+
+          const reqRes = await fetchData(vacationRequestsService.get())
+          if (Array.isArray(reqRes)) {
+            const myRequests = reqRes
+              .filter((r: any) => r.employee === employee.id && r.status === "pending")
+              .map((r: any) => `Solicitud #${r.id} - ${new Date(r.date).toLocaleDateString()}`)
+            setPendingRequests(myRequests)
+          }
+
+          const incRes = await fetchData(incidentsService.get())
+          if (Array.isArray(incRes)) {
+            const myIncidents = incRes
+              .filter((i: any) => i.employee === employee.id && i.enabled)
+              .map((i: any) => ({ 
+                title: i.type, 
+                date: new Date(i.date).toLocaleDateString() 
+              }))
+            setIncidents(myIncidents)
+          }
+
+          const annRes = await fetchData(announcementsService.get())
+          if (Array.isArray(annRes)) {
+            const mappedAnn = annRes
+              .filter((a: any) => a.enabled)
+              .map((a: any) => ({
+                icon: (a.priority === "high" ? "warning" : "info") as icons,
+                variant: (a.priority === "high" ? "warning" : "info") as variants,
+                children: (
+                  <div>
+                    <strong>{a.title}</strong>
+                    <div>{a.content}</div>
+                  </div>
+                )
+              }))
+            setNotices(mappedAnn)
+          }
+        }
+      } catch (e) {
+        console.error("Dashboard Load Error:", e)
+      }
+    }
+    loadDashboardData()
+    // Solo se dispara cuando el userId o fetchData cambian
+  }, [userId, fetchData])
 
   return (
     <__EmployeeLayout
@@ -176,7 +238,6 @@ function EmployeeDashboard() {
     />
   )
 }
-
 type EmployeeLayoutProps = {
   first: ReactNode
   second: ReactNode
@@ -216,14 +277,37 @@ function __EmployeeLayout({
 }
 
 function RRHHDashboard() {
-  const pendingRequests = 16
-  const pendingIncidents = 27
-  const daysForHolidays = 4
-  const notices: AlertObject[] = [
-    { icon: "info", children: "Información importante", variant: "info" },
-    { icon: "warning", children: "Advertencia", variant: "warning" },
-    { icon: "warning", children: "Advertencia", variant: "warning" },
-  ]
+  const { execute: fetchData } = useApi<any>()
+  const [pendingRequests, setPendingRequests] = useState(0)
+  const [pendingIncidents, setPendingIncidents] = useState(0)
+  const [daysForHolidays, setDaysForHolidays] = useState(0)
+  const [notices, setNotices] = useState<AlertObject[]>([])
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [reqs, incs, periods, anns] = await Promise.all([
+          fetchData(vacationRequestsService.get()),
+          fetchData(incidentsService.get()),
+          fetchData(vacationService.get()),
+          fetchData(announcementsService.get())
+        ])
+
+        setPendingRequests(reqs?.filter((r: any) => r.status === "pending").length || 0)
+        setPendingIncidents(incs?.filter((i: any) => i.enabled).length || 0)
+        setDaysForHolidays(periods?.reduce((acc: number, p: any) => acc + (p.days_remaining || 0), 0) || 0)
+
+        const mapped = anns?.map((a: any) => ({
+          icon: "info" as icons,
+          variant: "info" as variants,
+          children: <strong>{a.title}</strong>
+        })) || []
+        setNotices(mapped)
+
+      } catch (e) { console.error(e) }
+    }
+    loadData()
+  }, [fetchData])
 
   return (
     <__RRHHLayout
