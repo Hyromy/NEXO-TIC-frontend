@@ -282,6 +282,9 @@ export const incidentsService = {
   get: (id: number = 0): Promise<incident[] | incident> => (
     api.get(incidentsService.endpoint + param(id))
   ),
+  update: (id: number, data: { justified: string }) => (
+    api.patch(incidentsService.endpoint + param(id), data)
+  ),
 }
 
 export type vacationRequest = {
@@ -296,9 +299,11 @@ export type completeVacationRequest = Omit<vacationRequest, "employee"> & {
 }
 export const vacationRequestsService = {
   endpoint: API_URL + "vacation-requests/",
-
   get: (id: number = 0): Promise<vacationRequest[] | vacationRequest> => (
     api.get(vacationRequestsService.endpoint + param(id))
+  ),
+  update: (id: number, data: { status: string }) => (
+    api.patch(vacationRequestsService.endpoint + param(id), data)
   ),
 }
 
