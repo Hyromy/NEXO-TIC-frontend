@@ -1,6 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { request, api } from '../services/api'
-import { userService, authService } from '../services/nexotic'
+import {
+  userService,
+  authService,
+  employeeService,
+  departmentService,
+  jobPositionService,
+  employeeTerminationService,
+  employmentHistoryService,
+  incidentsService,
+  vacationRequestsService,
+  vacationDetailsService,
+  vacationApprovalsService,
+} from '../services/nexotic'
 
 describe('Services package', () => {
   describe('api.ts', () => {
@@ -370,6 +382,215 @@ describe('Services package', () => {
               new_password: 'newSecurePass123'
             })
           })
+        )
+      })
+    })
+
+    describe('employeeService', () => {
+      it('should have correct endpoint', () => {
+        expect(employeeService.endpoint).toBe(API_URL + 'employees/')
+      })
+
+      it('should get all employees when no id provided', async () => {
+        await employeeService.get()
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'employees/',
+          expect.objectContaining({ method: 'GET' })
+        )
+      })
+
+      it('should create employee with expected payload', async () => {
+        await employeeService.create(
+          'John',
+          'Doe',
+          3,
+          'john.doe@nexotic.com',
+          '1234567890',
+          7
+        )
+
+        const today = new Date().toISOString().split('T')[0]
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'employees/',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+              join_date: today,
+              name: 'John',
+              last_name: 'Doe',
+              department: 3,
+              email: 'john.doe@nexotic.com',
+              phone: '1234567890',
+              job_position: 7
+            })
+          })
+        )
+      })
+
+      it('should update employee with expected payload and id endpoint', async () => {
+        await employeeService.update(
+          10,
+          'Jane',
+          'Smith',
+          4,
+          'jane.smith@nexotic.com',
+          '0987654321',
+          9
+        )
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'employees/10/',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: 'Jane',
+              last_name: 'Smith',
+              department: 4,
+              email: 'jane.smith@nexotic.com',
+              phone: '0987654321',
+              job_position: 9
+            })
+          })
+        )
+      })
+    })
+
+    describe('departmentService', () => {
+      it('should have correct endpoint', () => {
+        expect(departmentService.endpoint).toBe(API_URL + 'departments/')
+      })
+
+      it('should get department by id', async () => {
+        await departmentService.get(3)
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'departments/3/',
+          expect.objectContaining({ method: 'GET' })
+        )
+      })
+    })
+
+    describe('jobPositionService', () => {
+      it('should have correct endpoint', () => {
+        expect(jobPositionService.endpoint).toBe(API_URL + 'job-positions/')
+      })
+
+      it('should get job positions without id', async () => {
+        await jobPositionService.get()
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'job-positions/',
+          expect.objectContaining({ method: 'GET' })
+        )
+      })
+    })
+
+    describe('employeeTerminationService', () => {
+      it('should have correct endpoint', () => {
+        expect(employeeTerminationService.endpoint).toBe(API_URL + 'employee-terminations/')
+      })
+
+      it('should create employee termination with expected payload', async () => {
+        await employeeTerminationService.create(12, 'renuncia', 'Motivo de prueba')
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'employee-terminations/',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+              employee: 12,
+              type: 'renuncia',
+              reason: 'Motivo de prueba',
+            })
+          })
+        )
+      })
+    })
+
+    describe('employmentHistoryService', () => {
+      it('should have correct endpoint', () => {
+        expect(employmentHistoryService.endpoint).toBe(API_URL + 'employment-history/')
+      })
+
+      it('should get employment history by id', async () => {
+        await employmentHistoryService.get(8)
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'employment-history/8/',
+          expect.objectContaining({ method: 'GET' })
+        )
+      })
+
+      it('should create employment history with required payload', async () => {
+        await employmentHistoryService.create(
+          'Cambio de puesto',
+          10,
+          4,
+          7,
+        )
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'employment-history/',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+              description: 'Cambio de puesto',
+              employee: 10,
+              last_job_position: 4,
+              new_job_position: 7,
+            })
+          })
+        )
+      })
+    })
+
+    describe('incidentsService', () => {
+      it('should have correct endpoint', () => {
+        expect(incidentsService.endpoint).toBe(API_URL + 'incidents/')
+      })
+
+      it('should get incidents without id', async () => {
+        await incidentsService.get()
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'incidents/',
+          expect.objectContaining({ method: 'GET' })
+        )
+      })
+    })
+
+    describe('vacation services', () => {
+      it('should have correct endpoints', () => {
+        expect(vacationRequestsService.endpoint).toBe(API_URL + 'vacation-requests/')
+        expect(vacationDetailsService.endpoint).toBe(API_URL + 'vacation-details/')
+        expect(vacationApprovalsService.endpoint).toBe(API_URL + 'vacation-approvals/')
+      })
+
+      it('should get vacation requests by id', async () => {
+        await vacationRequestsService.get(2)
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'vacation-requests/2/',
+          expect.objectContaining({ method: 'GET' })
+        )
+      })
+
+      it('should get vacation details without id', async () => {
+        await vacationDetailsService.get()
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'vacation-details/',
+          expect.objectContaining({ method: 'GET' })
+        )
+      })
+
+      it('should get vacation approvals without id', async () => {
+        await vacationApprovalsService.get()
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          API_URL + 'vacation-approvals/',
+          expect.objectContaining({ method: 'GET' })
         )
       })
     })

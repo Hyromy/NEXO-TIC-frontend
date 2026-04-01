@@ -22,6 +22,14 @@ let refreshPromise: Promise<boolean> | null = null
  * 
  * @returns The common headers object.
  */
+
+export type ApiResponse<T> = T | {
+  error: true
+  message: string
+  status?: number
+  originalError?: any
+}
+
 const getCommonHeaders = () => {
   const token = getAccessToken()
   return {
@@ -52,11 +60,11 @@ const getCommonHeaders = () => {
  * - On success: The response data from the API.
  * - On error: An object containing an `error` boolean, a `message` string describing the error, and optionally the original error object for debugging.
  */
-export async function request(
+export async function request<T>(
   endpoint: string,
   options: RequestInit = {},
   ignoreAuth: boolean = false
-) {
+): Promise<ApiResponse<T>> {
   const accessToken = getAccessToken()
   if (accessToken && isTokenExpired(accessToken) && !ignoreAuth) {
     const refreshed = await refreshAccessToken()
@@ -126,12 +134,10 @@ export async function request(
     }
 
   } catch (err: any) {
-    if (err.error) return err
-
     return {
       error: true,
-      message: err.message || 'Network error or server is unreachable.',
-      object: err,
+      message: err.message || "Network error",
+      originalError: err
     }
   }
 }
@@ -246,18 +252,18 @@ const apiHeaders = (
  * }
  */
 export const api = {
-  get: (endpoint: string, ignoreAuth: boolean = false) => 
-    request(endpoint, apiHeaders(), ignoreAuth),
+  get: <T>(endpoint: string, ignoreAuth: boolean = false) =>
+    request<T>(endpoint, apiHeaders(), ignoreAuth),
 
-  post: (endpoint: string, body: object, ignoreAuth: boolean = false) =>
-    request(endpoint, apiHeaders("POST", body), ignoreAuth),
+  post: <T>(endpoint: string, body: object, ignoreAuth: boolean = false) =>
+    request<T>(endpoint, apiHeaders("POST", body), ignoreAuth),
 
-  put: (endpoint: string, body: object, ignoreAuth: boolean = false ) =>
-    request(endpoint, apiHeaders("PUT", body), ignoreAuth),
+  put: <T>(endpoint: string, body: object, ignoreAuth: boolean = false) =>
+    request<T>(endpoint, apiHeaders("PUT", body), ignoreAuth),
 
-  patch: (endpoint: string, body: object, ignoreAuth: boolean = false) =>
-    request(endpoint, apiHeaders("PATCH", body), ignoreAuth),
+  patch: <T>(endpoint: string, body: object, ignoreAuth: boolean = false) =>
+    request<T>(endpoint, apiHeaders("PATCH", body), ignoreAuth),
 
-  delete: (endpoint: string, ignoreAuth: boolean = false) => 
-    request(endpoint, apiHeaders("DELETE"), ignoreAuth),
+  delete: <T>(endpoint: string, ignoreAuth: boolean = false) =>
+    request<T>(endpoint, apiHeaders("DELETE"), ignoreAuth),
 }

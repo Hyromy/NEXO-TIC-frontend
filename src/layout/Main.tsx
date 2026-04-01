@@ -1,15 +1,15 @@
-import { type ReactNode } from "react"
+import { useEffect, type ReactNode } from "react"
 
 import Menu from "./Menu"
 import Navbar from "./Navbar"
 import Foot from "./Foot"
 
-import { Canvas } from "../components/Canvas"
+import { Canvas, closeCanvas } from "../components/Canvas"
 import { Button } from "../components/Button"
 
 import { protectedRoutes } from "../routes"
 
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import useUser from "../hooks/useUser"
 import { Spinner } from "../components/Spinner"
 
@@ -21,9 +21,20 @@ type MainProps = {
 export default function Main({
   children
 }: MainProps) {
+  const location = useLocation()
   const navigate = useNavigate()
   const { loading, userType } = useUser()
   const { theme } = useTheme()
+  const menuCanvasId = "menuCanvas"
+
+  const handleMenuNavigation = (path: string) => {
+    closeCanvas(menuCanvasId)
+    navigate(path)
+  }
+
+  useEffect(() => {
+    closeCanvas(menuCanvasId)
+  }, [location.pathname])
 
   const routeAvaiability = (route: typeof protectedRoutes[0]) => (
     route.allowedFor!.includes("all") || route.allowedFor!.includes(userType!)
@@ -40,7 +51,7 @@ export default function Main({
   )
 
   const bsIconClasses = (icon: string) => `bi bi-${icon} me-2`
-  const currentPath = window.location.pathname
+  const currentPath = location.pathname
   const menu = (
     <Menu 
       modules={protectedRoutes.filter(moduleFilter).map((module, index) => (
@@ -48,7 +59,7 @@ export default function Main({
           key={index}
           variant={currentPath.includes(module.path!) ? "primary" : theme}
           fat
-          onClick={() => navigate(module.path!)}
+          onClick={() => handleMenuNavigation(module.path!)}
         >
           <i className={bsIconClasses(module.icon)}></i>
           {module.label}
@@ -59,7 +70,7 @@ export default function Main({
           key={index}
           variant={currentPath.includes(module.path!) ? "primary" : theme}
           fat
-          onClick={() => navigate(module.path!)}
+          onClick={() => handleMenuNavigation(module.path!)}
         >
           <i className={bsIconClasses(module.icon)}></i>
           {module.label}
@@ -80,11 +91,11 @@ export default function Main({
         <div className="flex-grow-1 d-flex flex-column">
           <Navbar />
           <div className="d-md-none">
-            <Canvas id="menuCanvas" title="Menú de navegación">
+            <Canvas id={menuCanvasId} title="Menú de navegación">
               {menu}
             </Canvas>
           </div>
-          <main className="p-4 container">
+          <main className="p-4 container-xxl">
             {children}
           </main>
         </div>
