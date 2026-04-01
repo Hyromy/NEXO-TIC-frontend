@@ -105,29 +105,6 @@ export const authService = {
     }),
 };
 
-export const vacationService = {
-  endpoint: API_URL + "vacation-periods/",
-  get: (id: number = 0) => api.get(vacationService.endpoint + param(id)),
-};
-
-export const vacationRequestService = {
-  endpoint: API_URL + "vacation-requests/",
-  get: (id: number = 0) => api.get(vacationRequestService.endpoint + param(id)),
-  create: (data: any) => api.post(vacationRequestService.endpoint, data),
-};
-
-export const vacationDetailService = {
-  endpoint: API_URL + "vacation-details/",
-  get: (id: number = 0) => api.get(vacationDetailService.endpoint + param(id)),
-  create: (data: any) => api.post(vacationDetailService.endpoint, data),
-};
-
-export const vacationPeriodService = {
-  endpoint: API_URL + "vacation-periods/",
-  getByEmployee: (employeeId: number) =>
-    api.get(`${vacationPeriodService.endpoint}?employee=${employeeId}`),
-};
-
 
 // EMPLOYEES
 export const employeeService = {
