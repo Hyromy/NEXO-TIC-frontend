@@ -9,7 +9,7 @@ import useApi from "../../hooks/useApi"
 import { decodeJWT } from "../../utils/jwt"
 import { getAccessToken } from "../../utils/getters"
 import { 
-  incidentsService, 
+  incidentService, 
   employeeService, 
 } from "../../services/nexotic"
 
@@ -76,22 +76,27 @@ function IndicentsHistory({
     const loadIncidents = async () => {
       if (!userId) return
       try {
-        const empRes = await fetchData(employeeService.get(userId))
-        const employee = Array.isArray(empRes) ? empRes[0] : empRes
+        const empRes = await fetchData(employeeService.getAll())
+        const employee = Array.isArray(empRes) 
+          ? empRes.find((e: any) => Number(e.user?.id || e.user) === Number(userId)) 
+          : null
 
         if (employee) {
-          const res = await fetchData(incidentsService.get())
-          if (Array.isArray(res)) {
-            const mapped = res
-              .filter((i: any) => i.employee === employee.id)
-              .map((i: any) => ({
-                id: i.id,
-                dateTime: new Date(i.date),
-                type: i.type,
-                status: i.justified 
-              }))
-            setIncidents(mapped)
-          }
+          const res = await fetchData(incidentService.getAll())
+          const allIncidents = Array.isArray(res) ? res : []
+          
+          const mapped = allIncidents
+            .filter((i: any) => {
+              const empId = i.employee?.id || i.employee_id || i.employee;
+              return Number(empId) === Number(employee.id);
+            })
+            .map((i: any) => ({
+              id: i.id,
+              dateTime: new Date(i.date),
+              type: i.type,
+              status: i.justified 
+            }))
+          setIncidents(mapped)
         }
       } catch (e) { console.error(e) }
     }
@@ -109,8 +114,9 @@ function IndicentsHistory({
     incident.type,
     incident.status,
     <Button
-      variant={incident.status != "No justificado" ? "secondary" : "primary"}
-      isLoading={incident.status != "No justificado"}
+      key={incident.id}
+      variant={incident.status !== "No justificado" ? "secondary" : "primary"}
+      isLoading={incident.status !== "No justificado"}
       onClick={() => goToJustify(incident)}
     >
       Justificar
@@ -141,7 +147,6 @@ const validate = (data: expectedData) => {
   if (evidences.every(evidence => evidence == null)) {
     return "Debe adjuntar al menos una evidencia."
   }
-  
   return "ok"
 }
 
@@ -177,8 +182,8 @@ function NewIncident({
   }
 
   const addEvidence = (evidence: any) => {
-    const emptyIndex = evidences[0] == null ? 0 : 1
-    if (emptyIndex < maxEvidences) {
+    const emptyIndex = evidences.indexOf(null)
+    if (emptyIndex !== -1 && emptyIndex < maxEvidences) {
       const newEvidences = [...evidences]
       newEvidences[emptyIndex] = evidence
       setEvidences(newEvidences)
@@ -188,7 +193,7 @@ function NewIncident({
   const handleSubmit = (data: expectedData) => {
     data.evidences = evidences
     const validationError = validate(data)
-    if (validationError != "ok") {
+    if (validationError !== "ok") {
       alert("Error de validación: " + validationError)
       return
     }

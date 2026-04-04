@@ -11,11 +11,14 @@ import { Table } from "../../components/Table";
 import { Badge } from "../../components/Badge";
 import useApi from "../../hooks/useApi";
 import {
-  vacationService,
+  vacationPeriodService,
   vacationRequestService,
   vacationDetailService,
+  employeeService, 
 } from "../../services/nexotic";
 import { useNavigate } from "react-router-dom";
+import { decodeJWT } from "../../utils/jwt";
+import { getAccessToken } from "../../utils/getters";
 
 interface TarjetaData {
   titulo: string;
@@ -47,13 +50,17 @@ export default function Vacaciones() {
   const { execute, data } = useApi<any>();
   const { execute: executeRequests, data: dataRequests } = useApi<any>();
   const { execute: executeDetails, data: dataDetails } = useApi<any>();
- 
+  const { execute: fetchEmp, data: employees } = useApi<any>();
+  const token = getAccessToken();
+  const decoded: any = token ? decodeJWT(token) : null;
+  const userId = decoded?.user_id;
 
   useEffect(() => {
-    execute(vacationService.get());
-    executeRequests(vacationRequestService.get());
-    executeDetails(vacationDetailService.get());
-  }, [execute, executeRequests, executeDetails]);
+    fetchEmp(employeeService.getAll());
+    execute(vacationPeriodService.getAll()); 
+    executeRequests(vacationRequestService.getAll());
+    executeDetails(vacationDetailService.getAll());
+  }, [execute, executeRequests, executeDetails, fetchEmp]);
 
   if (selectedSolicitud) {
     return (
@@ -63,62 +70,65 @@ export default function Vacaciones() {
       />
     );
   }
+  //FILTRADO: Buscamos al empleado para que no salgan datos de otros
+  const myEmployee = Array.isArray(employees) 
+    ? employees.find((e: any) => Number(e.user?.id || e.user) === Number(userId)) 
+    : null;
+  // añadimos el filtro y solicitudes
   const tarjetas: TarjetaData[] =
-    data && data.length > 0
-      ? [
-          { titulo: "AÑO", valor: data[0]?.year },
-          { titulo: "DIAS ASIGNADOS", valor: data[0]?.days_assigned },
-          { titulo: "DIAS USADOS", valor: data[0]?.days_used },
-          { titulo: "DIAS DISPONIBLES", valor: data[0]?.days_remaining },
-        ]
+    Array.isArray(data) && myEmployee
+      ? data
+          .filter((p: any) => (p.employee?.id || p.employee) === myEmployee.id)
+          .map((p: any) => ([
+            { titulo: "AÑO", valor: p.year },
+            { titulo: "DIAS ASIGNADOS", valor: p.days_assigned },
+            { titulo: "DIAS USADOS", valor: p.days_used },
+            { titulo: "DIAS DISPONIBLES", valor: p.days_remaining },
+          ]))[0] || [] 
       : [];
-
-  //filtrando los detalles por solicitud
   const solicitudes: Solicitud[] =
-    dataRequests?.map((req: any) => {
-      const detalles =
-        dataDetails?.filter(
-          (d: any) => d.vacation_request === req.id
-        ) || [];
+    Array.isArray(dataRequests) && myEmployee
+      ? dataRequests
+          .filter((req: any) => (req.employee?.id || req.employee) === myEmployee.id)
+          .map((req: any) => {
+            const detalles = Array.isArray(dataDetails)
+              ? dataDetails.filter((d: any) => 
+                  (d.vacation_request?.id || d.vacation_request_id || d.vacation_request) === req.id
+                )
+              : [];
 
-      return {
-        id: `Solicitud #${req.id}`,
-        fechas:
-          detalles.length > 0
-            ? detalles.map((d: any) => d.selected_day).join(", ")
-            : "-",
-        dias: detalles.length,
-        estatus: req.status,
-        acciones: (
-          <Button
-            size="sm"
-            variant="info"
-            onClick={() =>
-              setSelectedSolicitud({
-                nombre: req.employee 
-      ? `${req.employee.name} ${req.employee.surname} ${req.employee.mothers_name}` 
-      : "Empleado sin nombre",
- 
-    fechaSolicitud: new Date(req.date).toLocaleDateString(),
-                dias: detalles.length,
-                estatus: req.status,
-                comentario: "Sin comentario",
-                fechas: detalles.map((d: any) => {
-                  const dateObj = new Date(d.selected_day);
-                  return {
-                    dia: dateObj.getUTCDate(),
-                    mes: dateObj.getUTCMonth() + 1,
-                    anio: dateObj.getUTCFullYear(),
-                  };
-                }),
-              })
-            }
-          >
-            Detalles
-          </Button>
-        ),
-      };
-    }) || [];
+            return {
+              id: `Solicitud #${req.id}`,
+              fechas: detalles.length > 0 ? detalles.map((d: any) => d.selected_day).join(", ") : "-",
+              dias: detalles.length,
+              estatus: req.status,
+              acciones: (
+                <Button
+                  size="sm"
+                  variant="info" 
+                  onClick={() =>
+                    setSelectedSolicitud({
+                    nombre: `${myEmployee.user?.first_name} ${myEmployee.user?.last_name}`,
+                    fechaSolicitud: new Date(req.date || Date.now()).toLocaleDateString(),
+                    dias: detalles.length,
+                    estatus: req.status,
+                    comentario: req.notes || "Sin comentario",
+                    fechas: detalles.map((d: any) => {
+                      const dateObj = new Date(d.selected_day);
+                      return {
+                        dia: dateObj.getDate(),
+                        mes: dateObj.getMonth() + 1,
+                        anio: dateObj.getFullYear(),
+                      };
+                    }),
+                  })}
+                >
+                  Detalles
+                </Button>
+              ),
+            };
+          })
+      : [];
 
   return (
     <Main>

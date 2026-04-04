@@ -18,11 +18,11 @@ import { type icons, type variants } from "../../components/variants"
 import { getHumanName, getAccessToken } from "../../utils/getters"
 import { decodeJWT } from "../../utils/jwt"
 import {
-  vacationService,
-  vacationRequestsService,
+  vacationPeriodService,
+  vacationRequestService,
   employeeService,
-  announcementsService,
-  incidentsService
+  announcementService,
+  incidentService
 } from "../../services/nexotic"
 
 const defaultHeight = 192
@@ -138,8 +138,8 @@ function Incidents({
     ? container(<h2>{forceNumber}</h2>)
     : items && items.length > 0
       ? <List
-          items={items.map(item => (
-            <StackContainer >
+          items={items.map((item, index) => (
+            <StackContainer key={index}>
               {item.title} - {item.date}
             </StackContainer>
           ))}
@@ -172,61 +172,53 @@ function EmployeeDashboard() {
   const decoded: any = token ? decodeJWT(token) : null
   const userId = decoded?.user_id
 
-  useEffect(() => {
+ useEffect(() => {
     const loadDashboardData = async () => {
       if (!userId) return
       try {
-        const empRes = await fetchData(employeeService.get(userId))
-        const employee = Array.isArray(empRes) ? empRes[0] : empRes
+        const empRes = await fetchData(employeeService.getAll())
+        const employee = Array.isArray(empRes) 
+          ? empRes.find((e: any) => Number(e.user?.id || e.user) === Number(userId)) 
+          : null
+
         if (employee) {
-          const periodRes = await fetchData(vacationService.get())
+          const [periodRes, reqRes, incRes, annRes] = await Promise.all([
+            fetchData(vacationPeriodService.getAll()),
+            fetchData(vacationRequestService.getAll()),
+            fetchData(incidentService.getAll()),
+            fetchData(announcementService.getAll())
+          ])
+
           const myPeriod = Array.isArray(periodRes) 
-            ? periodRes.find((p: any) => p.employee === employee.id)
+            ? periodRes.find((p: any) => (p.employee?.id || p.employee) === employee.id)
             : null
           setPendingHolidays(myPeriod?.days_remaining || 0)
 
-          const reqRes = await fetchData(vacationRequestsService.get())
           if (Array.isArray(reqRes)) {
-            const myRequests = reqRes
-              .filter((r: any) => r.employee === employee.id && r.status === "pending")
+            setPendingRequests(reqRes
+              .filter((r: any) => (r.employee?.id || r.employee) === employee.id && r.status === "pending")
               .map((r: any) => `Solicitud #${r.id} - ${new Date(r.date).toLocaleDateString()}`)
-            setPendingRequests(myRequests)
+            )
           }
 
-          const incRes = await fetchData(incidentsService.get())
           if (Array.isArray(incRes)) {
-            const myIncidents = incRes
-              .filter((i: any) => i.employee === employee.id && i.enabled)
-              .map((i: any) => ({ 
-                title: i.type, 
-                date: new Date(i.date).toLocaleDateString() 
-              }))
-            setIncidents(myIncidents)
+            setIncidents(incRes
+              .filter((i: any) => (i.employee?.id || i.employee) === employee.id && i.enabled)
+              .map((i: any) => ({ title: i.type, date: new Date(i.date).toLocaleDateString() }))
+            )
           }
 
-          const annRes = await fetchData(announcementsService.get())
           if (Array.isArray(annRes)) {
-            const mappedAnn = annRes
-              .filter((a: any) => a.enabled)
-              .map((a: any) => ({
-                icon: (a.priority === "high" ? "warning" : "info") as icons,
-                variant: (a.priority === "high" ? "warning" : "info") as variants,
-                children: (
-                  <div>
-                    <strong>{a.title}</strong>
-                    <div>{a.content}</div>
-                  </div>
-                )
-              }))
-            setNotices(mappedAnn)
+            setNotices(annRes.filter((a: any) => a.enabled).map((a: any) => ({
+              icon: (a.priority === "high" ? "warning" : "info") as icons,
+              variant: (a.priority === "high" ? "warning" : "info") as variants,
+              children: <div key={a.id}><strong>{a.title}</strong><div>{a.content}</div></div>
+            })))
           }
         }
-      } catch (e) {
-        console.error("Dashboard Load Error:", e)
-      }
+      } catch (e) { console.error(e) }
     }
     loadDashboardData()
-    // Solo se dispara cuando el userId o fetchData cambian
   }, [userId, fetchData])
 
   return (
@@ -287,21 +279,21 @@ function RRHHDashboard() {
     const loadData = async () => {
       try {
         const [reqs, incs, periods, anns] = await Promise.all([
-          fetchData(vacationRequestsService.get()),
-          fetchData(incidentsService.get()),
-          fetchData(vacationService.get()),
-          fetchData(announcementsService.get())
+          fetchData(vacationRequestService.getAll()),
+          fetchData(incidentService.getAll()),
+          fetchData(vacationPeriodService.getAll()),
+          fetchData(announcementService.getAll())
         ])
 
-        setPendingRequests(reqs?.filter((r: any) => r.status === "pending").length || 0)
-        setPendingIncidents(incs?.filter((i: any) => i.enabled).length || 0)
-        setDaysForHolidays(periods?.reduce((acc: number, p: any) => acc + (p.days_remaining || 0), 0) || 0)
+        setPendingRequests(Array.isArray(reqs) ? reqs.filter((r: any) => r.status === "pending").length : 0)
+        setPendingIncidents(Array.isArray(incs) ? incs.filter((i: any) => i.enabled).length : 0)
+        setDaysForHolidays(Array.isArray(periods) ? periods.reduce((acc: number, p: any) => acc + (p.days_remaining || 0), 0) : 0)
 
-        const mapped = anns?.map((a: any) => ({
+        const mapped = Array.isArray(anns) ? anns.map((a: any) => ({
           icon: "info" as icons,
           variant: "info" as variants,
           children: <strong>{a.title}</strong>
-        })) || []
+        })) : []
         setNotices(mapped)
 
       } catch (e) { console.error(e) }

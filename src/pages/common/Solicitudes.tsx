@@ -16,7 +16,7 @@ import useApi from "../../hooks/useApi";
 import {
   vacationRequestService,
   vacationDetailService,
-  vacationService,
+  vacationPeriodService,
   employeeService,
 } from "../../services/nexotic";
 import { getAccessToken } from "../../utils/getters";
@@ -55,8 +55,6 @@ export default function Solicitudes() {
 
   const { execute: createRequest } = useApi<any>();
   const { execute: createDetail } = useApi<any>();
-
-  // Instancia para carga de datos iniciales
   const { execute: fetchData } = useApi<any>();
   const token = getAccessToken();
   const decoded: any = token ? decodeJWT(token) : null;
@@ -64,27 +62,28 @@ export default function Solicitudes() {
   useEffect(() => {
     const loadInitialData = async () => {
       if (!userId) return;
-
       try {
-        // Buscamos al empleado usando el servicio
-        const empRes = await fetchData(employeeService.get(userId));
-        const employee = Array.isArray(empRes) ? empRes[0] : empRes;
+        const empRes = await fetchData(employeeService.getAll());
+        const employee = Array.isArray(empRes) 
+          ? empRes.find((e: any) => Number(e.user?.id || e.user) === Number(userId)) 
+          : null;
 
         if (employee) {
           setRealEmployeeId(employee.id);
-          const periodRes = await fetchData(vacationService.get());
-          if (periodRes && periodRes.length > 0) {
-            const currentPeriod =
-              periodRes.find((p: any) => p.employee === employee.id) ||
-              periodRes[0];
-            setAvailableDays(currentPeriod.days_remaining || 0);
+          const periodRes = await fetchData(vacationPeriodService.getAll());
+          const periods = Array.isArray(periodRes) ? periodRes : [];
+
+          if (periods.length > 0) {
+            const currentPeriod = periods.find((p: any) => 
+              Number(p.employee?.id || p.employee) === Number(employee.id)
+            );
+            setAvailableDays(currentPeriod?.days_remaining || 0);
           }
         }
       } catch (error) {
         console.error("Error al cargar datos iniciales:", error);
       }
     };
-
     loadInitialData();
   }, [userId, fetchData]);
 
@@ -103,58 +102,31 @@ export default function Solicitudes() {
     setStep(currentStep);
   };
   const handleSend = async () => {
-    if (!realEmployeeId) {
-      alert("No se pudo identificar su perfil de empleado.");
-      return;
-    }
-
+    if (!realEmployeeId) return;
     try {
-      const request = await createRequest(
+      const requestRes = await createRequest(
         vacationRequestService.create({
           status: "pending",
-          employee: realEmployeeId,
+          employee_id: realEmployeeId,
         }),
       );
 
-      console.log("Respuesta de Solicitud Creada:", request); //
+      if (requestRes && !requestRes.error) {
+        for (const day of data.schedule) {
+          const dateObj = new Date(day);
+          const formattedDate = dateObj.toISOString().split("T")[0];
 
-      if (!request || request.error) {
-        alert(
-          "Error al crear la solicitud: " +
-            (request?.message || "Servidor no responde"),
-        );
-        return;
-      }
-
-      const requestId = request.id;
-      for (const day of data.schedule) {
-        // Formatear a YYYY-MM-DD
-        const dateObj = new Date(day);
-        const formattedDate = dateObj.toISOString().split("T")[0];
-
-        console.log(
-          `Enviando día: ${formattedDate} para solicitud ID: ${requestId}`,
-        );
-
-        const detailRes = await createDetail(
-          vacationDetailService.create({
-            selected_day: formattedDate,
-            vacation_request: requestId,
-          }),
-        );
-
-        if (detailRes && detailRes.error) {
-          console.error("RESPUESTA DEL SERVIDOR:", detailRes);
-          alert("Error en el día " + formattedDate + ": " + detailRes.message);
+          await createDetail(
+            vacationDetailService.create({
+              selected_day: formattedDate,
+              vacation_request_id: requestRes.id,
+            }),
+          );
         }
+        alert("¡Solicitud enviada con éxito!");
+        navigate("/holidays");
       }
-
-      alert("¡Solicitud enviada con éxito! ✅\nRevisa tu historial.");
-      navigate("/holidays");
-    } catch (e) {
-      console.error("Error fatal:", e);
-      alert("Ocurrió un error inesperado.");
-    }
+    } catch (e) { console.error(e); }
   };
 
   const renderStep = () => {
@@ -165,7 +137,7 @@ export default function Solicitudes() {
             typeRequest={data.typeRequest}
             onReady={(fields) => {
               updateData(fields);
-              setCanContinue(fields.typeRequest != "");
+              setCanContinue(fields.typeRequest !== "");
             }}
           />
         );
@@ -185,9 +157,10 @@ export default function Solicitudes() {
           <Summary
             typeRequest={data.typeRequest}
             schedule={data.schedule}
-            onReady={() => {
+            onReady={(fields) => {
+              updateData(fields);
               setCanContinue(
-                (data.schedule?.length ?? 0) > 0 && data.typeRequest != "",
+                (data.schedule?.length ?? 0) > 0 && data.typeRequest !== "",
               );
             }}
           />
@@ -260,11 +233,7 @@ function RequestType({ typeRequest, onReady }: RequestTypeProps) {
     <Option key="4" text="Dia económico" value="economicDay" />,
     <Option key="5" text="Salida anticipada" value="earlyExit" />,
     <Option key="6" text="Incapacidad medica" value="medicalIncapacity" />,
-    <Option
-      key="7"
-      text="Permiso por maternidad / paternidad"
-      value="parentalLeave"
-    />,
+    <Option key="7" text="Permiso por maternidad / paternidad" value="parentalLeave" />,
   ];
   const handleTypeChange = (value: string) => {
     setLocalType(value);
@@ -290,11 +259,9 @@ type ScheduleProps = StepViewProps & {
 };
 function Schedule({ schedule, onReady, availableDays = 0 }: ScheduleProps) {
   const [localSchedule, setLocalSchedule] = useState(schedule);
-
   useEffect(() => {
     if (localSchedule.length > 0) onReady({ schedule: localSchedule });
   }, []);
-
   const canAddMore = localSchedule.length < availableDays;
   const canRemove = localSchedule.length > 0;
 
@@ -311,7 +278,6 @@ function Schedule({ schedule, onReady, availableDays = 0 }: ScheduleProps) {
     setLocalSchedule(newSchedule);
     onReady({ schedule: newSchedule });
   };
-
   return (
     <>
       <h2>Horario</h2>
@@ -357,7 +323,6 @@ function Summary({ typeRequest, schedule, onReady }: SummaryProps) {
   useEffect(() => {
     onReady({ typeRequest, schedule });
   }, []);
-
   const items = [
     `Tipo de solicitud: ${typeRequest}`,
     <Accordion
@@ -370,7 +335,6 @@ function Summary({ typeRequest, schedule, onReady }: SummaryProps) {
       ]}
     />,
   ];
-
   return (
     <>
       <h2>Resumen de solicitud</h2>
