@@ -5,16 +5,16 @@ import { Table } from "../../components/Table"
 import { ColContainer, RowContainer, ScrollableContainer, StackContainer } from "../../layout/Containers"
 import useApi from "../../hooks/useApi"
 import {
-  userService, type User as user,
-  employeeService, type Employee as employee, type CompleteEmployee as completeEmployee,
-  departmentService, type Department as department,
-  jobPositionService, type JobPosition as jobPosition,
+  userService, type user,
+  employeeService, type employee, type completeEmployee,
+  departmentService, type department,
+  jobPositionService, type jobPosition,
   employeeTerminationService,
-  employmentHistoryService, type EmploymentHistory as employmentHistory, type CompleteEmploymentHistory as completeEmploymentHistory,
+  employmentHistoryService, type employmentHistory, type completeEmploymentHistory,
   incidentService as incidentsService, type Incident as incident,
-  vacationRequestService as vacationRequestsService, type VacationRequest as vacationRequest, type CompleteVacationRequest as completeVacationRequest,
-  vacationDetailService as vacationDetailsService, type VacationDetail as vacationDetail, type CompleteVacationDetail as completeVacationDetail,
-  vacationApprovalService as vacationApprovalsService, type VacationApproval as vacationApproval, type CompleteVacationApproval as completeVacationApproval,
+  vacationRequestService as vacationRequestsService, type completeVacationRequest,
+  vacationDetailService as vacationDetailsService, type completeVacationDetail,
+  vacationApprovalService as vacationApprovalsService, type completeVacationApproval,
 } from "../../services/nexotic"
 import { Spinner } from "../../components/Spinner"
 import {
@@ -152,7 +152,7 @@ export default function Gestion_Empleados() {
         nextRequestData.employees,
       ])
 
-      setCurrentEmployee((prev) => {
+      setCurrentEmployee((prev: completeEmployee | null) => {
         if (!prev) return prev
         return parsedEmployees.find((employee) => employee.id == prev.id) || prev
       })
@@ -805,8 +805,8 @@ function DeleteEmployeeModal ({
     execute(
       employeeTerminationService.create({
         employee: employee.id,
-        type: fd.type,
-        reason: fd.reason,
+        type: data.type,
+        reason: data.reason,
       })
     )
   }

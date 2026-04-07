@@ -17,7 +17,6 @@ import {
   incidentService, 
   employeeService 
 } from "../../services/nexotic"
-import { Alert, launchAlert } from "../../components/Alert"
 
 type holydayRequest = {
   id: number,

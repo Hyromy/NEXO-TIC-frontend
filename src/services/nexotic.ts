@@ -19,6 +19,123 @@ import type { User } from "../types/User"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/";
 
+export type { User, Employee, Department, JobPosition, EmploymentHistory, Incident, VacationRequest, VacationDetail, VacationApproval }
+
+export type CompleteEmployee = Employee
+export type CompleteEmploymentHistory = EmploymentHistory
+export type CompleteVacationRequest = VacationRequest
+export type CompleteVacationDetail = VacationDetail
+export type CompleteVacationApproval = VacationApproval
+
+export type user = {
+  id: number
+  last_login?: string | null
+  is_superuser: boolean
+  username: string
+  first_name: string
+  last_name: string
+  email: string
+  is_staff: boolean
+  is_active: boolean
+  date_joined: string
+  groups?: number[]
+  user_permissions?: number[]
+}
+
+export type department = {
+  id: number
+  name: string
+  description: string
+  enabled: boolean
+}
+
+export type jobPosition = {
+  id: number
+  name: string
+  description: string
+  enabled: boolean
+  department: number
+}
+
+export type employee = {
+  id: number
+  user: number
+  job_position: number
+  join_date: string
+  phone: string
+  enabled: boolean
+}
+
+export type employmentHistory = {
+  id: number
+  update_at: string
+  description: string
+  enabled: boolean
+  employee: number
+  last_job_position: number
+  new_job_position: number
+}
+
+export type vacationRequest = {
+  id: number
+  date: string
+  status: string
+  enabled: boolean
+  employee: number
+}
+
+export type vacationDetail = {
+  id: number
+  selected_day: string
+  enabled: boolean
+  vacation_request: number
+}
+
+export type vacationApproval = {
+  id: number
+  date: string
+  decision: string
+  note: string
+  enabled: boolean
+  vacation_request: number
+  approver: number
+}
+
+export type completeJobPosition = Omit<jobPosition, "department"> & { department: department }
+export type completeEmployee = Omit<employee, "user" | "job_position"> & { user: user; job_position: completeJobPosition }
+export type completeEmploymentHistory = Omit<employmentHistory, "employee" | "last_job_position" | "new_job_position"> & {
+  employee: completeEmployee
+  last_job_position: completeJobPosition
+  new_job_position: completeJobPosition
+}
+export type completeVacationRequest = Omit<vacationRequest, "employee"> & { employee: completeEmployee }
+export type completeVacationDetail = Omit<vacationDetail, "vacation_request"> & { vacation_request: completeVacationRequest }
+export type completeVacationApproval = Omit<vacationApproval, "vacation_request"> & { vacation_request: completeVacationRequest }
+
+type EmployeeMutationData = {
+  name: string
+  last_name: string
+  email: string
+  phone: string
+  department: number
+  job_position?: number
+  job_position_id?: number
+}
+
+const normalizeEmployeeMutation = (data: Partial<EmployeeMutationData>) => {
+  const { job_position, job_position_id, ...rest } = data
+  const normalizedJobPosition = job_position ?? job_position_id
+
+  if (normalizedJobPosition === undefined) {
+    return rest
+  }
+
+  return {
+    ...rest,
+    job_position: normalizedJobPosition,
+  }
+}
+
 /**
  * Generates a URL parameter string for a request ID if it is a valid positive integer.
  * 
@@ -31,8 +148,8 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/";
  * @param id - The request ID.
  * @returns The URL parameter string or an empty string if the ID is invalid.
  */
-const param = (id: number) => (
-  Number.isInteger(id) && id > 0 ? `${id}/` : ""
+const param = (id?: number) => (
+  typeof id === "number" && Number.isInteger(id) && id > 0 ? `${id}/` : ""
 )
 
 /**
@@ -43,6 +160,9 @@ const param = (id: number) => (
 export const userService = {
   endpoint: API_URL + "users/",
 
+  get: (id?: number): Promise<ApiResponse<User | User[]>> =>
+    api.get(userService.endpoint + param(id)),
+
   getAll: (): Promise<ApiResponse<User[]>> =>
     api.get(userService.endpoint),
 
@@ -52,7 +172,7 @@ export const userService = {
   create: (data: {
     username: string
     password: string
-    email: string
+    email?: string
   }) =>
     api.post(userService.endpoint, data),
 }
@@ -110,40 +230,71 @@ export const authService = {
 export const employeeService = {
   endpoint: API_URL + "employees/",
 
+  get: (id?: number): Promise<ApiResponse<Employee | Employee[]>> =>
+    api.get(employeeService.endpoint + param(id)),
+
   getAll: (): Promise<ApiResponse<Employee[]>> =>
     api.get(employeeService.endpoint),
 
   getById: (id: number): Promise<ApiResponse<Employee>> =>
     api.get(employeeService.endpoint + param(id)),
 
-  create: (data: {
-    name: string
-    last_name: string
-    email: string
-    phone: string
-    department: number
-    job_position_id: number
-  }) =>
-    api.post(employeeService.endpoint, {
-      join_date: new Date().toISOString().split("T")[0],
-      ...data
-    }),
+  create: (
+    dataOrName: EmployeeMutationData | string,
+    last_name?: string,
+    department?: number,
+    email?: string,
+    phone?: string,
+    job_position?: number,
+  ) => {
+    const payload = typeof dataOrName === "string"
+      ? {
+          name: dataOrName,
+          ...(last_name !== undefined && { last_name }),
+          ...(department !== undefined && { department }),
+          ...(email !== undefined && { email }),
+          ...(phone !== undefined && { phone }),
+          ...(job_position !== undefined && { job_position }),
+        }
+      : normalizeEmployeeMutation(dataOrName)
 
-  update: (id: number, data: Partial<{
-    name: string
-    last_name: string
-    email: string
-    phone: string
-    department: number
-    job_position_id: number
-  }>) =>
-    api.patch(employeeService.endpoint + param(id), data),
+    return api.post(employeeService.endpoint, {
+      join_date: new Date().toISOString().split("T")[0],
+      ...payload
+    })
+  },
+
+  update: (
+    id: number,
+    dataOrName: Partial<EmployeeMutationData> | string,
+    last_name?: string,
+    department?: number,
+    email?: string,
+    phone?: string,
+    job_position?: number,
+  ) => {
+    const payload = typeof dataOrName === "string"
+      ? {
+          name: dataOrName,
+          ...(last_name !== undefined && { last_name }),
+          ...(department !== undefined && { department }),
+          ...(email !== undefined && { email }),
+          ...(phone !== undefined && { phone }),
+          ...(job_position !== undefined && { job_position }),
+        }
+      : normalizeEmployeeMutation(dataOrName)
+
+    return api.patch(employeeService.endpoint + param(id), payload)
+  },
 }
 
 
 // DEPARTMENTS
 export const departmentService = {
   endpoint: API_URL + "departments/",
+
+  get: (id?: number): Promise<ApiResponse<Department | Department[]>> =>
+    api.get(departmentService.endpoint + param(id)),
 
   getAll: (): Promise<ApiResponse<Department[]>> =>
     api.get(departmentService.endpoint),
@@ -174,6 +325,9 @@ export const departmentService = {
 // JOB POSITIONS
 export const jobPositionService = {
   endpoint: API_URL + "job-positions/",
+
+  get: (id?: number): Promise<ApiResponse<JobPosition | JobPosition[]>> =>
+    api.get(jobPositionService.endpoint + param(id)),
 
   getAll: (): Promise<ApiResponse<JobPosition[]>> =>
     api.get(jobPositionService.endpoint),
@@ -272,19 +426,37 @@ export const vacationPeriodService = {
 export const employmentHistoryService = {
   endpoint: API_URL + "employment-history/",
 
+  get: (id?: number): Promise<ApiResponse<EmploymentHistory | EmploymentHistory[]>> =>
+    api.get(employmentHistoryService.endpoint + param(id)),
+
   getAll: (): Promise<ApiResponse<EmploymentHistory[]>> =>
     api.get(employmentHistoryService.endpoint),
 
   getById: (id: number): Promise<ApiResponse<EmploymentHistory>> =>
     api.get(employmentHistoryService.endpoint + param(id)),
 
-  create: (data: {
-    description: string
-    employee: number
-    last_job_position: number
-    new_job_position: number
-  }) =>
-    api.post(employmentHistoryService.endpoint, data),
+  create: (
+    dataOrDescription: {
+      description: string
+      employee: number
+      last_job_position: number
+      new_job_position: number
+    } | string,
+    employee?: number,
+    last_job_position?: number,
+    new_job_position?: number,
+  ) => {
+    const payload = typeof dataOrDescription === "string"
+      ? {
+          description: dataOrDescription,
+          employee: employee ?? 0,
+          last_job_position: last_job_position ?? 0,
+          new_job_position: new_job_position ?? 0,
+        }
+      : dataOrDescription
+
+    return api.post(employmentHistoryService.endpoint, payload)
+  },
 }
 
 
@@ -292,6 +464,9 @@ export const employmentHistoryService = {
 // INCIDENTS
 export const incidentService = {
   endpoint: API_URL + "incidents/",
+
+  get: (id?: number): Promise<ApiResponse<Incident | Incident[]>> =>
+    api.get(incidentService.endpoint + param(id)),
 
   getAll: (): Promise<ApiResponse<Incident[]>> =>
     api.get(incidentService.endpoint),
@@ -361,6 +536,9 @@ export const incidentJustificationService = {
 export const vacationRequestService = {
   endpoint: API_URL + "vacation-requests/",
 
+  get: (id?: number): Promise<ApiResponse<VacationRequest | VacationRequest[]>> =>
+    api.get(vacationRequestService.endpoint + param(id)),
+
   getAll: (): Promise<ApiResponse<VacationRequest[]>> =>
     api.get(vacationRequestService.endpoint),
 
@@ -391,6 +569,9 @@ export const vacationRequestService = {
 export const vacationDetailService = {
   endpoint: API_URL + "vacation-details/",
 
+  get: (id?: number): Promise<ApiResponse<VacationDetail | VacationDetail[]>> =>
+    api.get(vacationDetailService.endpoint + param(id)),
+
   getAll: (): Promise<ApiResponse<VacationDetail[]>> =>
     api.get(vacationDetailService.endpoint),
 
@@ -419,6 +600,9 @@ export const vacationDetailService = {
 // VACATION APPROVALS
 export const vacationApprovalService = {
   endpoint: API_URL + "vacation-approvals/",
+
+  get: (id?: number): Promise<ApiResponse<VacationApproval | VacationApproval[]>> =>
+    api.get(vacationApprovalService.endpoint + param(id)),
 
   getAll: (): Promise<ApiResponse<VacationApproval[]>> =>
     api.get(vacationApprovalService.endpoint),
@@ -451,18 +635,34 @@ export const vacationApprovalService = {
 export const employeeTerminationService = {
   endpoint: API_URL + "employee-terminations/",
 
+  get: (id?: number): Promise<ApiResponse<EmployeeTermination | EmployeeTermination[]>> =>
+    api.get(employeeTerminationService.endpoint + param(id)),
+
   getAll: (): Promise<ApiResponse<EmployeeTermination[]>> =>
     api.get(employeeTerminationService.endpoint),
 
   getById: (id: number): Promise<ApiResponse<EmployeeTermination>> =>
     api.get(employeeTerminationService.endpoint + param(id)),
 
-  create: (data: {
-    employee: number
-    type: string
-    reason: string
-  }) =>
-    api.post(employeeTerminationService.endpoint, data),
+  create: (
+    dataOrEmployee: {
+      employee: number
+      type: string
+      reason: string
+    } | number,
+    type?: string,
+    reason?: string,
+  ) => {
+    const payload = typeof dataOrEmployee === "number"
+      ? {
+          employee: dataOrEmployee,
+          type: type ?? "",
+          reason: reason ?? "",
+        }
+      : dataOrEmployee
+
+    return api.post(employeeTerminationService.endpoint, payload)
+  },
 }
 
 
@@ -544,3 +744,8 @@ export const roleService = {
   getById: (id: number): Promise<ApiResponse<Role>> =>
     api.get(roleService.endpoint + param(id)),
 }
+
+export const incidentsService = incidentService
+export const vacationRequestsService = vacationRequestService
+export const vacationDetailsService = vacationDetailService
+export const vacationApprovalsService = vacationApprovalService

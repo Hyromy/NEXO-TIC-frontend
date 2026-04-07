@@ -120,32 +120,36 @@ export default function Solicitudes() {
         }),
       );
 
-      console.log("Respuesta de Solicitud Creada:", request); //
-
-      if (!request || request.error) {
+      if (!requestRes || requestRes.error) {
         return launchAlert("main-float-container",
           <Alert type="danger" icon="error">
-            Error al crear la solicitud: {request?.message || "Servidor no responde"}
+            Error al crear la solicitud: {requestRes?.message || "Servidor no responde"}
           </Alert>,
         )
       }
 
-      const requestId = request.id;
       for (const day of data.schedule) {
         // Formatear a YYYY-MM-DD
         const dateObj = new Date(day);
         const formattedDate = dateObj.toISOString().split("T")[0];
 
-          await createDetail(
-            vacationDetailService.create({
-              selected_day: formattedDate,
-              vacation_request_id: requestRes.id,
-            }),
-          );
-        }
-        alert("¡Solicitud enviada con éxito!");
-        navigate("/holidays");
+        await createDetail(
+          vacationDetailService.create({
+            selected_day: formattedDate,
+            vacation_request_id: requestRes.id,
+          }),
+        );
       }
+
+      launchAlert("main-float-container",
+        <Alert type="success" icon="success">
+          Solicitud enviada correctamente.
+        </Alert>,
+      )
+      setData(defaultState.data)
+      setCanContinue(defaultState.canContinue)
+      setStep(defaultMinStep)
+      navigate("/holidays");
     } catch (e) { console.error(e); }
   };
 
@@ -216,15 +220,8 @@ export default function Solicitudes() {
                 h_padding={defaultHorizontalPadding}
                 onClick={() => {
                   if (isEnd) {
-                    launchAlert("main-float-container",
-                      <Alert type="success" icon="success">
-                        Solicitud enviada correctamente.
-                      </Alert>,
-                    )
-                    setData(defaultState.data)
-                    setCanContinue(defaultState.canContinue)
-                    setStep(defaultMinStep)
-                    return  
+                    void handleSend()
+                    return
                   }
                   changeStep(true)
                 }}
