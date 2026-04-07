@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { ColContainer, RowContainer, StackContainer } from "../../layout/Containers"
 import { Form, TextField } from "../../components/Form"
 import { Card } from "../../components/Card"
+import { Alert, launchAlert } from "../../components/Alert"
 import useApi from "../../hooks/useApi"
 import { decodeJWT } from "../../utils/jwt"
 import { getAccessToken } from "../../utils/getters"
@@ -189,10 +190,19 @@ function NewIncident({
     data.evidences = evidences
     const validationError = validate(data)
     if (validationError != "ok") {
-      alert("Error de validación: " + validationError)
+      launchAlert("main-float-container",
+        <Alert type="warning" icon="warning">
+          {validationError}
+        </Alert>,
+      )
       return
     }
-    alert("Justificación enviada con éxito.")
+
+    launchAlert("main-float-container",
+      <Alert type="success" icon="success">
+        Incidencia justificada correctamente.
+      </Alert>,
+    )
     goBack()
   }
 

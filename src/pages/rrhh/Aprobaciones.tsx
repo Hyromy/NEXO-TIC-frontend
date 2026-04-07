@@ -12,6 +12,7 @@ import { useState, type ReactElement } from "react"
 import { Navigate } from "react-router-dom"
 import { Card } from "../../components/Card"
 import { TextField } from "../../components/Form"
+import { Alert, launchAlert } from "../../components/Alert"
 
 type holydayRequest = {
   id: number,
@@ -199,13 +200,21 @@ function HolidayView({
 
   const approveHandler = (item: holydayRequest) => {
     console.log(item)
-    alert("Aprobar solicitud")
+    launchAlert("main-float-container",
+      <Alert icon="info" type="info">
+        {"{{ DEBUG }} Solicitud aprobada exitosamente."}
+      </Alert>,
+    )
     goBackButton.props.onClick?.()
   }
 
   const rejectHandler = (item: holydayRequest) => {
     console.log(item)
-    alert("Rechazar solicitud")
+    launchAlert("main-float-container",
+      <Alert icon="info" type="info">
+        {"{{ DEBUG }} Solicitud rechazada."}
+      </Alert>,
+    )
     goBackButton.props.onClick?.()
   }
 
@@ -285,13 +294,21 @@ function IncidentView({
 
   const approveHandler = (item: incidentRequest) => {
     console.log(item)
-    alert("Aprobar justificación")
+    launchAlert("main-float-container",
+      <Alert icon="info" type="info">
+        {"{{ DEBUG }} Justificación aprobada exitosamente."}
+      </Alert>,
+    )
     goBackButton.props.onClick?.()
   }
 
   const rejectHandler = (item: incidentRequest) => {
     console.log(item)
-    alert("Rechazar justificación")
+    launchAlert("main-float-container",
+      <Alert icon="info" type="info">
+        {"{{ DEBUG }} Justificación rechazada."}
+      </Alert>,
+    )
     goBackButton.props.onClick?.()
   }
 

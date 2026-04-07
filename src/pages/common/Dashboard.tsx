@@ -101,7 +101,7 @@ function Notices({
 }: NoticesProps) {
   const content = items.length > 0
     ? items.map((item, index) => (
-      <Alert key={index} notDismissible icon={item.icon} type={item.variant}>
+      <Alert key={index} notDismissible icon={item.icon} type={item.variant} timeout={false}>
         {item.children}
       </Alert>)
     )
