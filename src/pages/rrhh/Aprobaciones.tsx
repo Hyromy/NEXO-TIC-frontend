@@ -1,5 +1,4 @@
 import Main from "../../layout/Main"
-
 import { Table } from "../../components/Table"
 import { Button, type ButtonProps } from "../../components/Button"
 import {
@@ -8,10 +7,16 @@ import {
   ScrollableContainer,
   StackContainer
 } from "../../layout/Containers"
-import { useState, type ReactElement } from "react"
+import { useEffect, useState, useCallback, type ReactElement } from "react"
 import { Navigate } from "react-router-dom"
 import { Card } from "../../components/Card"
 import { TextField } from "../../components/Form"
+import useApi from "../../hooks/useApi"
+import { 
+  vacationRequestService, 
+  incidentService, 
+  employeeService 
+} from "../../services/nexotic"
 import { Alert, launchAlert } from "../../components/Alert"
 
 type holydayRequest = {
@@ -19,6 +24,7 @@ type holydayRequest = {
   employeeName: string,
   date: string,
   days: number,
+  raw?: any // Para guardar el objeto original de la BD
 }
 
 type incidentRequest = {
@@ -26,6 +32,8 @@ type incidentRequest = {
   employeeName: string,
   date: string,
   type: string,
+  reason?: string,
+  raw?: any // Para guardar el objeto original de la BD
 }
 
 type currentView = "table" | "holiday" | "incident"
@@ -67,6 +75,59 @@ const btnsView = (
 export default function Aprobaciones() {
   const [view, setView] = useState<currentView>("table")
   const [selectedItem, setSelectedItem] = useState<holydayRequest | incidentRequest | null>(null)
+  const { execute: fetchData } = useApi<any>()
+  const [holydayRequests, setHolydayRequests] = useState<holydayRequest[]>([])
+  const [incidentRequests, setIncidentRequests] = useState<incidentRequest[]>([])
+
+  const loadData = useCallback(async () => {
+    try {
+      const [vacs, incs, emps] = await Promise.all([
+        fetchData(vacationRequestService.getAll()),
+        fetchData(incidentService.getAll()),
+        fetchData(employeeService.getAll())
+      ])
+
+      const employees = Array.isArray(emps) ? emps : []
+      
+      if (Array.isArray(vacs)) {
+        const pending = vacs.filter((v: any) => v.status === "pending" || v.status === "PENDING").map((v: any) => {
+          const emp = v.employee || employees.find((e: any) => e.id === v.employee)
+          const name = emp?.user 
+            ? `${emp.user.first_name} ${emp.user.last_name}`
+            : `Empleado #${v.employee?.id || v.employee}`;
+
+          return {
+            id: v.id,
+            employeeName: name,
+            date: v.date ? new Date(v.date.includes("T") ? v.date : v.date + "T00:00:00").toLocaleDateString() : "Sin fecha",
+            days: v.days || 0, 
+            raw: v
+          }
+        })
+        setHolydayRequests(pending)
+      }
+      if (Array.isArray(incs)) {
+        const pendingIncs = incs.filter((i: any) => i.justified === "No justificado" || i.justified === "NOT_JUSTIFIED").map((i: any) => {
+          const emp = i.employee || employees.find((e: any) => e.id === i.employee)
+          const name = emp?.user 
+            ? `${emp.user.first_name} ${emp.user.last_name}`
+            : `Empleado #${i.employee?.id || i.employee}`;
+
+          return {
+            id: i.id,
+            employeeName: name,
+            date: i.date ? new Date(i.date.includes("T") ? i.date : i.date + "T00:00:00").toLocaleDateString() : "Sin fecha",
+            type: i.type,
+            reason: i.justification_data?.reason || i.notes || "El empleado aún no ha redactado su justificación.",
+            raw: i
+          }
+        })
+        setIncidentRequests(pendingIncs)
+      }
+    } catch (e) { console.error(e) }
+  }, [fetchData])
+
+  useEffect(() => { loadData() }, [loadData])
 
   const goBackButton = (
     <Button 
@@ -74,6 +135,7 @@ export default function Aprobaciones() {
       onClick={() => {
         setSelectedItem(null)
         setView("table")
+        loadData() 
       }}
     >
       Volver
@@ -84,6 +146,8 @@ export default function Aprobaciones() {
     switch (view) {
       case "table":
         return <TableView
+          holydayRequests={holydayRequests}
+          incidentRequests={incidentRequests}
           goToHolidayRequest={(item: holydayRequest) => {
             setSelectedItem(item)
             setView("holiday")
@@ -119,25 +183,18 @@ export default function Aprobaciones() {
 }
 
 type TableViewProps = {
+  holydayRequests: holydayRequest[],
+  incidentRequests: incidentRequest[],
   goToHolidayRequest: (item: holydayRequest) => void,
   goToIncidentRequest: (item: incidentRequest) => void,
 }
+
 function TableView({
+  holydayRequests,
+  incidentRequests,
   goToHolidayRequest,
   goToIncidentRequest,
 }: TableViewProps) {
-  const holydayRequests: holydayRequest[] = [
-    { id: 1, employeeName: "Mateo Villanueva Rojas", date: "2026-12-12", days: 7 },
-    { id: 2, employeeName: "Elena Garrido Soto", date: "2026-04-22", days: 2 },
-    { id: 3, employeeName: "Carlos Mendoza Luna", date: "2026-02-18", days: 4 },
-    { id: 4, employeeName: "Valeria Quintana Díaz", date: "2026-03-31", days: 3 },
-  ]
-
-  const incidentRequests: incidentRequest[] = [
-    { id: 1, employeeName: "Julian Torres Blanco", date: "2026-03-31", type: "Inasistencia" },
-    { id: 2, employeeName: "Elena Garrido Soto", date: "2026-04-22", type: "Salida anticipada" },
-    { id: 3, employeeName: "Carlos Mendoza Luna", date: "2026-02-18", type: "Ausencia sin aviso" },
-  ]
 
   const trForHoliday = (row: holydayRequest) => [
     row.employeeName,
@@ -188,51 +245,46 @@ function HolidayView({
   item,
   goBackButton
 }: SomeViewProps) {
-  item = item as holydayRequest
-
-  const datesRequested = [
-    { day: 16, month: 1, year: 2026 },
-    { day: 19, month: 1, year: 2026 },
-    { day: 20, month: 1, year: 2026 },
-  ]
+  const holiday = item as holydayRequest
+  const { execute: fetchData } = useApi<any>()
+  const datesRequested = holiday.raw?.requested_days?.map((d: string) => {
+    const dateObj = new Date(d.includes("T") ? d : d + "T00:00:00")
+    return { day: dateObj.getDate(), month: dateObj.getMonth() + 1, year: dateObj.getFullYear() }
+  }) || []
 
   const textFieldName = "comments"
 
-  const approveHandler = (item: holydayRequest) => {
-    console.log(item)
-    launchAlert("main-float-container",
-      <Alert icon="info" type="info">
-        {"{{ DEBUG }} Solicitud aprobada exitosamente."}
-      </Alert>,
-    )
-    goBackButton.props.onClick?.()
+  const approveHandler = async () => {
+    try {
+      await fetchData(vacationRequestService.update(holiday.id, { status: "approved" }))
+      alert("Aprobar solicitud")
+      goBackButton.props.onClick?.()
+    } catch (e) { alert("Error al procesar la aprobación") }
   }
 
-  const rejectHandler = (item: holydayRequest) => {
-    console.log(item)
-    launchAlert("main-float-container",
-      <Alert icon="info" type="info">
-        {"{{ DEBUG }} Solicitud rechazada."}
-      </Alert>,
-    )
-    goBackButton.props.onClick?.()
+  const rejectHandler = async () => {
+    try {
+      await fetchData(vacationRequestService.update(holiday.id, { status: "rejected" }))
+      alert("Rechazar solicitud")
+      goBackButton.props.onClick?.()
+    } catch (e) { alert("Error al procesar el rechazo") }
   }
 
   const summary = (
     <RowContainer>
       <ColContainer defaultSize={12} md={4}>
         <Card header="Nombre" padding={3}>
-          {item.employeeName}
+          {holiday.employeeName}
         </Card>
       </ColContainer>
       <ColContainer defaultSize={12} md={4}>
         <Card header="Fecha Solicitud" padding={3}>
-          {item.date}
+          {holiday.date}
         </Card>
       </ColContainer>
       <ColContainer defaultSize={12} md={4}>
         <Card header="Días Solicitados" padding={3}>
-          {item.days}
+          {holiday.days}
         </Card>
       </ColContainer>
     </RowContainer>
@@ -241,7 +293,7 @@ function HolidayView({
   const calendarAndComments = (
     <RowContainer>
       <ColContainer defaultSize={12} lg={8}>
-        <Card header={`Fecha${item.days > 1 && "s"} solicitada${item.days > 1 && "s"}`}>
+        <Card header={`Fecha${holiday.days > 1 ? "s" : ""} solicitada${holiday.days > 1 ? "s" : ""}`}>
           <RowContainer>
             <ColContainer defaultSize={12} md={6}>
               <ScrollableContainer height={128}>
@@ -266,7 +318,7 @@ function HolidayView({
             name={textFieldName}
             type="area"
             rows={3}
-            placeholder="Escribe aqui tu comentario"
+            value={holiday.raw?.notes || "Sin comentarios adicionales"}
           />
         </Card>
       </ColContainer>
@@ -279,9 +331,8 @@ function HolidayView({
       {summary}
       {calendarAndComments}
       {btnsView(
-        () => approveHandler(item),
-        () => rejectHandler(item)
-      )}
+        approveHandler,
+        rejectHandler)}
     </StackContainer>
   )
 }
@@ -290,36 +341,33 @@ function IncidentView({
   item,
   goBackButton
 }: SomeViewProps) {
-  item = item as incidentRequest
+  const incident = item as incidentRequest
+  const { execute: fetchData } = useApi<any>()
 
-  const approveHandler = (item: incidentRequest) => {
-    console.log(item)
-    launchAlert("main-float-container",
-      <Alert icon="info" type="info">
-        {"{{ DEBUG }} Justificación aprobada exitosamente."}
-      </Alert>,
-    )
-    goBackButton.props.onClick?.()
+  const approveHandler = async () => {
+    try {
+      await fetchData(incidentService.update(incident.id, { justified: "Justificado" }))
+      alert("Aprobar justificación")
+      goBackButton.props.onClick?.()
+    } catch (e) { alert("Error en el servidor") }
   }
 
-  const rejectHandler = (item: incidentRequest) => {
-    console.log(item)
-    launchAlert("main-float-container",
-      <Alert icon="info" type="info">
-        {"{{ DEBUG }} Justificación rechazada."}
-      </Alert>,
-    )
-    goBackButton.props.onClick?.()
+  const rejectHandler = async () => {
+    try {
+      await fetchData(incidentService.update(incident.id, { justified: "No justificado" }))
+      alert("Rechazar justificación")
+      goBackButton.props.onClick?.()
+    } catch (e) { alert("Error en el servidor") }
   }
 
-  const evidences = [
-    { id: 1, name: "Evidencia 1", url: "https://example.com/evidence1.jpg" },
-    { id: 2, name: "Evidencia 2", url: "https://example.com/evidence2.jpg" },
-    { id: 3, name: "Evidencia 3", url: "https://example.com/evidence3.jpg" },
-  ]
+  const evidences = incident.raw?.evidences?.map((ev: any, idx: number) => ({
+    id: ev.id || idx,
+    name: `Evidencia ${idx + 1}`,
+    url: ev.file || ev.url
+  })) || []
 
   const incidentsDetails = [
-    { id: 1, date: "2026-01-15", time: "08:30", type: "Entrada tardía" },
+    { id: incident.id, date: incident.date, time: incident.raw?.time || "---", type: incident.type },
   ]
 
   const summary = (
@@ -327,24 +375,24 @@ function IncidentView({
       <RowContainer>
         <ColContainer>
           <Card header="Nombre" padding={3}>
-            {item.employeeName}
-          </Card>
+            {incident.employeeName}</Card>
         </ColContainer>
         <ColContainer>
           <Card header="Fecha de la justificación" padding={3}>
-            {item.date}
-          </Card>
+            {incident.date}</Card>
         </ColContainer>
       </RowContainer>
       <Card header="Motivo de la incidencia" padding={3}>
-        {"{{ some reason here }}"}
+       {incident.reason || "No se especificó un motivo en la solicitud."}
       </Card>
       <StackContainer orientation="row">
-        {evidences.map(evidence => (
+        {evidences.length > 0 ? evidences.map((evidence: any) => (
           <Card key={evidence.id}>
-            {evidence.name}
+             <a href={evidence.url} target="_blank" rel="noreferrer">
+               📄 {evidence.name}
+             </a>
           </Card>
-        ))}
+        )) : <p>No se adjuntaron evidencias gráficas.</p>}
       </StackContainer>
     </StackContainer>
   )
@@ -376,10 +424,7 @@ function IncidentView({
       {summary}
       {table}
       {comments}
-      {btnsView(
-        () => approveHandler(item),
-        () => rejectHandler(item)
-      )}
+      {btnsView(approveHandler, rejectHandler)}
     </StackContainer>
   )
 }

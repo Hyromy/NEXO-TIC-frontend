@@ -5,16 +5,16 @@ import { Table } from "../../components/Table"
 import { ColContainer, RowContainer, ScrollableContainer, StackContainer } from "../../layout/Containers"
 import useApi from "../../hooks/useApi"
 import {
-  userService, type user,
-  employeeService, type employee, type completeEmployee,
-  departmentService, type department,
-  jobPositionService, type jobPosition,
+  userService, type User as user,
+  employeeService, type Employee as employee, type CompleteEmployee as completeEmployee,
+  departmentService, type Department as department,
+  jobPositionService, type JobPosition as jobPosition,
   employeeTerminationService,
-  employmentHistoryService, type employmentHistory, type completeEmploymentHistory,
-  incidentsService, type incident,
-  vacationRequestsService, type vacationRequest, type completeVacationRequest,
-  vacationDetailsService, type vacationDetail, type completeVacationDetail,
-  vacationApprovalsService, type vacationApproval, type completeVacationApproval,
+  employmentHistoryService, type EmploymentHistory as employmentHistory, type CompleteEmploymentHistory as completeEmploymentHistory,
+  incidentService as incidentsService, type Incident as incident,
+  vacationRequestService as vacationRequestsService, type VacationRequest as vacationRequest, type CompleteVacationRequest as completeVacationRequest,
+  vacationDetailService as vacationDetailsService, type VacationDetail as vacationDetail, type CompleteVacationDetail as completeVacationDetail,
+  vacationApprovalService as vacationApprovalsService, type VacationApproval as vacationApproval, type CompleteVacationApproval as completeVacationApproval,
 } from "../../services/nexotic"
 import { Spinner } from "../../components/Spinner"
 import {
@@ -119,19 +119,14 @@ export default function Gestion_Empleados() {
   const [requestData, setRequestData] = useState<allData | null>(null)
   const [currentEmployee, setCurrentEmployee] = useState<completeEmployee | null>(null)
 
-  const { data, error, loading, execute } = useApi<[
-    user[],
-    department[],
-    jobPosition[],
-    employee[]
-  ]>()
+  const { data, error, loading, execute } = useApi<any>()
 
   const getData = () => {
     execute(
-      userService.get(),
-      departmentService.get(),
-      jobPositionService.get(),
-      employeeService.get(),
+      userService.getAll(),
+      departmentService.getAll(),
+      jobPositionService.getAll(),
+      employeeService.getAll(),
     )
   }
 
@@ -142,10 +137,10 @@ export default function Gestion_Empleados() {
   useEffect(() => {
     if (data) {
       const nextRequestData = {
-        users: data[0] as user[],
-        departments: data[1] as department[],
-        jobPositions: data[2] as jobPosition[],
-        employees: data[3] as employee[],
+        users: data[0].data as user[],
+        departments: data[1].data as department[],
+        jobPositions: data[2].data as jobPosition[],
+        employees: data[3].data as employee[],
       }
 
       setRequestData(nextRequestData)
@@ -290,13 +285,7 @@ function DetailsView ({
   records,
   goBack,
 }: DetailsViewProps) {
-  const { data, error, execute, loading } = useApi<[
-    employmentHistory[] | employmentHistory,
-    incident[] | incident,
-    vacationRequest[] | vacationRequest,
-    vacationDetail[] | vacationDetail,
-    vacationApproval[] | vacationApproval
-  ]>()
+  const { data, error, execute, loading } = useApi<any>()
 
   const [requestData, setRequestData] = useState<{
     history: completeEmploymentHistory[]
@@ -320,32 +309,32 @@ function DetailsView ({
     if (!employee?.id) return
 
     execute(
-      employmentHistoryService.get(),
-      incidentsService.get(),
-      vacationRequestsService.get(),
-      vacationDetailsService.get(),
-      vacationApprovalsService.get(),
+      employmentHistoryService.getAll(),
+      incidentsService.getAll(),
+      vacationRequestsService.getAll(),
+      vacationDetailsService.getAll(),
+      vacationApprovalsService.getAll(),
     )
   }, [employee?.id, employee?.job_position.id])
 
   useEffect(() => {
     if (data) {
-      const fromThisEmployee = (item: employmentHistory | incident) => (
-        item.employee == employee?.id
+      const fromThisEmployee = (item: any) => (
+        (item.employee || item.employee_id) == employee?.id
       )
 
       const vacationData = parseVacationRecords({
-        requests: asArray(data[2]),
-        details: asArray(data[3]),
-        approvals: asArray(data[4]),
+        requests: asArray(data[2].data),
+        details: asArray(data[3].data),
+        approvals: asArray(data[4].data),
       }, records, employee?.id)
 
       setRequestData({
         history: parseEmploymentHistory(
-          asArray(data[0]).filter(fromThisEmployee) as employmentHistory[],
+          asArray(data[0].data).filter(fromThisEmployee) as employmentHistory[],
           records
         ),
-        incidents: asArray(data[1]).filter(fromThisEmployee) as incident[],
+        incidents: asArray(data[1].data).filter(fromThisEmployee) as incident[],
         vacationRequests: vacationData.requests,
         vacationDetails: vacationData.details,
         vacationApprovals: vacationData.approvals,
@@ -625,15 +614,14 @@ function NewEmployeeModal ({
       )
 
       const requests = [
-        employeeService.update(
-          employeeId,
-          fd.name,
-          fd.last_name,
-          parseInt(fd.department, 10),
-          fd.email + "@nexotic.com",
-          fd.phone,
-          parseInt(fd.job_position, 10),
-        ),
+        employeeService.update(employeeId, {
+          name: fd.name,
+          last_name: fd.last_name,
+          department: parseInt(fd.department, 10),
+          email: fd.email + "@nexotic.com",
+          phone: fd.phone,
+          job_position_id: parseInt(fd.job_position, 10),
+        }),
       ]
 
       const hasValidHistoryParams = (
@@ -644,26 +632,26 @@ function NewEmployeeModal ({
 
       if (hasWorkAreaChanges && hasValidHistoryParams) {
         requests.push(
-          employmentHistoryService.create(
-            "Cambio de area/puesto desde gestión de empleados",
-            employeeId,
-            originalJobPositionId,
-            newJobPositionId,
-          )
+          employmentHistoryService.create({
+            description: "Cambio de area/puesto desde gestión de empleados",
+            employee: employeeId,
+            last_job_position: originalJobPositionId,
+            new_job_position: newJobPositionId,
+          })
         )
       }
 
       execute(...requests)
     } else {
       execute(
-        employeeService.create(
-          fd.name,
-          fd.last_name,
-          parseInt(fd.department, 10),
-          fd.email + "@nexotic.com",
-          fd.phone,
-          parseInt(fd.job_position, 10),
-        )
+        employeeService.create({
+          name: fd.name,
+          last_name: fd.last_name,
+          department: parseInt(fd.department, 10),
+          email: fd.email + "@nexotic.com",
+          phone: fd.phone,
+          job_position_id: parseInt(fd.job_position, 10),
+        })
       )
     }
   }
@@ -671,7 +659,7 @@ function NewEmployeeModal ({
   useEffect(() => {
     if (!submittedMode) return
 
-    if (data as employee) {
+    if (data?.data) {
       const successMessage = submittedMode == "edit"
         ? "Empleado actualizado exitosamente."
         : "Empleado registrado exitosamente. El empleado recibirá un correo para configurar su cuenta."
@@ -786,13 +774,10 @@ function NewEmployeeModal ({
   )
 }
 
-type DeleteEmployeeModalProps = {
-  employee: completeEmployee
-}
 function DeleteEmployeeModal ({
   employee,
-}: DeleteEmployeeModalProps) {
-  const { data, error, execute, loading } = useApi()
+}: { employee: completeEmployee }) {
+  const { data, error, execute, loading } = useApi<any>()
 
   type expectedData = {
     reason: string
@@ -818,17 +803,18 @@ function DeleteEmployeeModal ({
     }
 
     execute(
-      employeeTerminationService.create(
-        employee.id,
-        data.type,
-        data.reason,
-      )
+      employeeTerminationService.create({
+        employee: employee.id,
+        type: fd.type,
+        reason: fd.reason,
+      })
     )
   }
 
   useEffect(() => {
-    if (data) {
-      console.log("Empleado eliminado:", data)
+    if (data?.data) {
+      alert("Baja procesada")
+      closeModal(deleteEmployeeModalId)
     }
     if (error) {
       launchAlert("main-float-container",
@@ -865,7 +851,3 @@ function DeleteEmployeeModal ({
     </Modal>
   )
 }
-
-/* 
-  espero que esta vista no tenga problemas pq me da flojera solo de verlo
-*/
