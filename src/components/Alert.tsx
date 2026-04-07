@@ -1,5 +1,11 @@
-import { type ReactNode, isValidElement } from "react"
+import {
+  type ReactNode,
+  isValidElement,
+  useEffect,
+  useRef
+} from "react"
 import { createRoot } from "react-dom/client"
+import { Alert as BSAlert } from "bootstrap"
 
 import { type variants, type icons } from "./variants"
 
@@ -15,28 +21,28 @@ type AlertProps = {
   type?: variants
   notDismissible?: boolean
   icon?: icons
+  timeout?: number | false
 }
-/**
- * Alert component that displays a message to the user. It can be dismissible or not, and can optionally include an icon corresponding to the alert type.
- * 
- * @example
- * <Alert type="success" icon="success">
- *   This is a success alert with an icon and a close button.
- * </Alert>
- * 
- * @param children - The content of the alert. Can be text or any ReactNode.
- * @param type - The type of the alert. Can be "primary", "secondary", "success", "danger", "warning", "info", "light" or "dark". Default is "primary".
- * @param notDismissible - If true, the alert will not have a close button and cannot be dismissed by the user. Default is false.
- * @param icon - If provided, an icon corresponding to the alert type will be displayed on the left side of the alert. Default is undefined (no icon).
- */
 export function Alert({
   children,
   type = "primary",
   notDismissible,
   icon,
+  timeout = 5000,
 }: AlertProps) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (timeout && ref.current) {
+      const timer = setTimeout(() => {
+        BSAlert.getOrCreateInstance(ref.current!).close()
+      }, timeout)
+      return () => clearTimeout(timer)
+    }
+  }, [timeout])
+
   return (
-    <div className={`alert alert-${type}${!notDismissible ? " alert-dismissible" : ""}${icon ? " d-flex align-items-center" : ""} fade show`} role="alert">
+    <div ref={ref} className={`alert alert-${type}${!notDismissible ? " alert-dismissible" : ""}${icon ? " d-flex align-items-center" : ""} fade show`} role="alert">
       {icon && (
         <i className={`${_icons[icon].className} flex-shrink-0 me-2`} role="img" aria-label={_icons[icon].label}></i>
       )}
@@ -95,11 +101,18 @@ export function AlertLink({
  * @param containerId 
  * @param alert 
  */
-export function launchAlert(containerId: string, alert: ReactNode) {
+export function launchAlert(
+  containerId: string,
+  alert: ReactNode,
+  clear: boolean = false,
+  limit: number = 5,
+) {
   const placeholder = document.getElementById(containerId)
-  if (!placeholder) throw new Error(`Container with ID "${containerId}" not found.`)
 
+  if (!placeholder) throw new Error(`Container with ID "${containerId}" not found.`)
   if (!(isValidElement(alert) && alert.type == Alert)) throw new Error("The alert must be a valid React element of type Alert.")
+  if (clear) placeholder.innerHTML = ""
+  if (limit <= placeholder.children.length) placeholder.removeChild(placeholder.firstElementChild!)
 
   const wrapper = document.createElement("div")
   placeholder.appendChild(wrapper)

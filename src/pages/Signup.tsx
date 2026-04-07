@@ -12,8 +12,9 @@ import { Form, TextField, GroupField, GroupFieldText } from "../components/Form"
 import { Button } from "../components/Button"
 import { Spinner } from "../components/Spinner"
 import { Card } from "../components/Card"
+import { Alert, launchAlert } from "../components/Alert"
 
-import { StackContainer } from "../layout/Containers"
+import { FloatContainer, StackContainer } from "../layout/Containers"
 
 import { isEmail } from "../utils/validator"
 
@@ -39,8 +40,18 @@ const validate = (data: {
   return "ok"
 }
 
-const userCreated = () => {
-  alert("Usuario creado exitosamente. Revise su correo para confirmar la cuenta.")
+const translateError = (err: string) => {
+  if (err.includes("User already exists")) {
+    return {
+      known: true,
+      message: "El nombre de usuario ya está en uso. Por favor, elige otro nombre de usuario o correo electrónico."
+    }
+  }
+
+  return {
+    known: false,
+    message: "Ocurrió un error inesperado. Por favor, intenta de nuevo más tarde."
+  }
 }
 
 export default function Signup() {
@@ -48,12 +59,26 @@ export default function Signup() {
 
   const [loading, setLoading] = useState(false)
 
+  const alertContainerId = "alert-container-signup"
+
   useEffect(() => {
     if (data && data.ok) {
-      userCreated()
+      launchAlert(alertContainerId,
+        <Alert icon="success" type="success" notDismissible>
+          Usuario creado exitosamente. Revise su correo para confirmar la cuenta.
+        </Alert>
+      )
     }
     if (error) {
-      alert("Error creando usuario: " + error)
+      const { known, message } = translateError(error)
+      if (!known) {
+        console.error("Signup error:", error)
+      }
+      launchAlert(alertContainerId,
+        <Alert icon={known ? "warning" : "error"} type={known ? "warning" : "danger"} notDismissible>
+          {message}
+        </Alert>
+      )
     }
   }, [data, error])
 
@@ -61,7 +86,11 @@ export default function Signup() {
     data.email = data.email + "@nexotic.com"
     const validationError = validate(data)
     if (validationError != "ok") {
-      alert("Error de validación: " + validationError)
+      launchAlert(alertContainerId,
+        <Alert icon="warning" type="warning" notDismissible>
+          {validationError}
+        </Alert>
+      )
       return
     }
 
@@ -98,6 +127,7 @@ export default function Signup() {
           <small>¿Olvidaste tu contraseña? <a href={rawRoutes.index.recovery}>Recupérala aquí</a></small>
         </StackContainer>
       </Card>
+      <FloatContainer id={alertContainerId} />
     </main>
   )
 }

@@ -87,7 +87,7 @@ export async function request<T>(
   try {
     const response = await fetch(endpoint, config)
 
-    if (response.status == 401) {
+    if (response.status == 401 && !ignoreAuth) {
       const refreshed = await refreshAccessToken()
       
       if (refreshed) {
