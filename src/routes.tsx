@@ -101,7 +101,7 @@ export const protectedRoutes: appRoute[] = [
   { 
     path: rawRoutes.employee.holidays,
     element: <Vacaciones />,
-    allowedFor: ["employee"],
+    allowedFor: ["all"],
     label: "Vacaciones",
     icon: "calendar-check",
     type: "module"
@@ -136,6 +136,12 @@ export const protectedRoutes: appRoute[] = [
     allowedFor: ["rrhh"],
     label: "Nuevo aviso",
     icon: "plus-circle-fill",
+  },
+  { 
+    path: `${rawRoutes.rrhh.notices}/edit/:id`, // Construye la ruta /notices/edit/:id
+    element: <Nuevo_Aviso />,
+    allowedFor: ["rrhh"],
+    // No ponemos label ni icon para que sea una ruta "invisible" en el menú
   },
   { 
     path: rawRoutes.common.incidents,
