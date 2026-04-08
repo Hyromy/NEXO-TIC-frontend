@@ -101,7 +101,7 @@ export const protectedRoutes: appRoute[] = [
   { 
     path: rawRoutes.employee.holidays,
     element: <Vacaciones />,
-    allowedFor: ["employee"],
+    allowedFor: ["employee","rrhh"],
     label: "Vacaciones",
     icon: "calendar-check",
     type: "module"
