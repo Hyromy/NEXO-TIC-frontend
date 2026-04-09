@@ -189,6 +189,18 @@ function EmployeeDashboard() {
             fetchData(announcementService.getAll())
           ])
 
+          const priorityIcons: Record<string, any> = {
+            Alta: "warning",
+            Media: "warning", // O el icono que prefieras para media
+            Baja: "info",
+          };
+
+          const priorityVariants: Record<string, any> = {
+            Alta: "danger",    // Rojo
+            Media: "warning",  // Amarillo/Naranja
+            Baja: "info",     // Azul/Cyan
+          };
+
           const myPeriod = Array.isArray(periodRes) 
             ? periodRes.find((p: any) => (p.employee?.id || p.employee) === employee.id)
             : null
@@ -210,8 +222,8 @@ function EmployeeDashboard() {
 
           if (Array.isArray(annRes)) {
             setNotices(annRes.filter((a: any) => a.enabled).map((a: any) => ({
-              icon: (a.priority === "high" ? "warning" : "info") as icons,
-              variant: (a.priority === "high" ? "warning" : "info") as variants,
+              icon: (priorityIcons[a.priority] || "info") as icons,
+              variant: (priorityVariants[a.priority] || "info") as variants,
               children: <div key={a.id}><strong>{a.title}</strong><div>{a.content}</div></div>
             })))
           }
