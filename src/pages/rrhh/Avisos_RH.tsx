@@ -12,6 +12,7 @@ import { openModal, closeModal, Modal } from "../../components/Modal" // Agregam
 
 import { announcementService } from "../../services/nexotic"
 import { type Announcement } from "../../types/Announcement"
+import { type variants } from "../../components/variants"
 
 export default function Avisos_RH() {
   const navigate = useNavigate()
@@ -57,7 +58,7 @@ export default function Avisos_RH() {
     return "📢"
   }
 
-  const badgeTypes: Record<string, string> = {
+  const badgeTypes: Record<string, variants> = {
     Alta: "danger",   // Rojo
     Media: "warning", // Amarillo
     Baja: "primary",  // Azul
@@ -86,15 +87,17 @@ export default function Avisos_RH() {
         {/* --- NUEVO: Botones de Acción --- */}
         <div className="d-flex gap-2">
           <Button 
-            variant="outline-info" 
-            small 
+            variant="info"
+            outLine
+            size="sm"
             onClick={() => navigate(`/notices/edit/${aviso.id}`)}
           >
             Editar
           </Button>
           <Button 
-            variant="outline-danger" 
-            small 
+            variant="danger"
+            outLine
+            size="sm"
             onClick={() => {
               setSelectedAviso(aviso);
               openModal(deleteModalId);
@@ -118,7 +121,7 @@ export default function Avisos_RH() {
         </div>
 
         {loading ? (
-          <StackContainer center padding={5}>
+          <StackContainer center>
             <Spinner />
           </StackContainer>
         ) : (

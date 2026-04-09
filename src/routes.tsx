@@ -138,10 +138,11 @@ export const protectedRoutes: appRoute[] = [
     icon: "plus-circle-fill",
   },
   { 
-    path: `${rawRoutes.rrhh.notices}/edit/:id`, // Construye la ruta /notices/edit/:id
+    path: `${rawRoutes.rrhh.notices}/edit/:id`,
     element: <Nuevo_Aviso />,
     allowedFor: ["rrhh"],
-    // No ponemos label ni icon para que sea una ruta "invisible" en el menú
+    label: "Editar aviso",
+    icon: "pencil-fill",
   },
   { 
     path: rawRoutes.common.incidents,

@@ -12,17 +12,11 @@ import {
   employeeTerminationService,
   employmentHistoryService, type employmentHistory, type completeEmploymentHistory,
   incidentService as incidentsService, type Incident as incident,
-  vacationRequestService as vacationRequestsService, type completeVacationRequest,
-  vacationDetailService as vacationDetailsService, type completeVacationDetail,
-  vacationApprovalService as vacationApprovalsService, type completeVacationApproval,
+  vacationRequestService as vacationRequestsService, type vacationRequest,
+  vacationDetailService as vacationDetailsService, type vacationDetail,
+  vacationApprovalService as vacationApprovalsService, type vacationApproval,
 } from "../../services/nexotic"
 import { Spinner } from "../../components/Spinner"
-import {
-  parseEmployee,
-  parseEmploymentHistory,
-  parseVacationRecords,
-  type EmployeeRecords
-} from "../../utils/parser"
 import { Button } from "../../components/Button"
 import { closeModal, Modal, openModal } from "../../components/Modal"
 import {
@@ -114,6 +108,239 @@ type allData = {
   employees: employee[],
 }
 
+type EmployeeRecords = [user[], department[], jobPosition[], employee[]]
+
+const asList = <T,>(value: unknown): T[] => (
+  Array.isArray(value) ? (value as T[]) : []
+)
+
+const asCollection = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) return value as T[]
+  if (!value || typeof value != "object") return []
+
+  const source = value as Record<string, unknown>
+
+  if (Array.isArray(source.results)) return source.results as T[]
+  if (Array.isArray(source.data)) return source.data as T[]
+
+  return []
+}
+
+const fromBatch = <T,>(batch: unknown, index: number): T[] => {
+  if (!Array.isArray(batch)) return []
+
+  const item = batch[index] as unknown
+  if (!item || typeof item != "object") {
+    return asCollection<T>(item)
+  }
+
+  const source = item as Record<string, unknown>
+  return asCollection<T>(source.data ?? source)
+}
+
+const toEmployeeRecords = (data: allData | null): EmployeeRecords | null => {
+  if (!data) return null
+  return [
+    asList<user>(data.users),
+    asList<department>(data.departments),
+    asList<jobPosition>(data.jobPositions),
+    asList<employee>(data.employees),
+  ]
+}
+
+const getEntityId = (value: unknown): number | null => {
+  if (typeof value == "number") return Number.isNaN(value) ? null : value
+
+  if (typeof value == "string") {
+    const parsed = parseInt(value, 10)
+    return Number.isNaN(parsed) ? null : parsed
+  }
+
+  if (value && typeof value == "object") {
+    const source = value as Record<string, unknown>
+    return getEntityId(source.id)
+  }
+
+  return null
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  !!value && typeof value == "object"
+)
+
+const hydrateEmployees = (records: EmployeeRecords | null): completeEmployee[] => {
+  if (!records) return []
+
+  const [users, departments, jobPositions, employees] = records
+
+  return employees.flatMap((currentEmployee) => {
+    const rawEmployee = currentEmployee as unknown as Record<string, unknown>
+
+    const employeeUserId = getEntityId(rawEmployee.user)
+    const employeeUser = employeeUserId
+      ? users.find((item) => item.id == employeeUserId)
+      : (isRecord(rawEmployee.user) ? rawEmployee.user as user : null)
+
+    const employeeJobPositionId = getEntityId(rawEmployee.job_position)
+    const employeeJobPosition = employeeJobPositionId
+      ? jobPositions.find((item) => item.id == employeeJobPositionId)
+      : (isRecord(rawEmployee.job_position) ? rawEmployee.job_position as jobPosition : null)
+
+    const rawDepartment = isRecord(rawEmployee.job_position)
+      ? (rawEmployee.job_position as Record<string, unknown>).department
+      : undefined
+
+    const employeeDepartmentId = getEntityId(rawDepartment ?? employeeJobPosition?.department)
+    const employeeDepartment = employeeDepartmentId
+      ? departments.find((item) => item.id == employeeDepartmentId)
+      : (isRecord(rawDepartment) ? rawDepartment as department : null)
+
+    if (!employeeUser || !employeeJobPosition || !employeeDepartment) {
+      return []
+    }
+
+    return [{
+      ...currentEmployee,
+      user: employeeUser,
+      job_position: {
+        ...employeeJobPosition,
+        department: employeeDepartment,
+      },
+    }]
+  })
+}
+
+const hydrateEmploymentHistory = (
+  history: employmentHistory[],
+  records: EmployeeRecords | null,
+): completeEmploymentHistory[] => {
+  if (!records) return []
+
+  const completeEmployees = hydrateEmployees(records)
+  const [, departments, jobPositions] = records
+
+  const getCompleteJobPosition = (value: unknown) => {
+    const id = getEntityId(value)
+    const position = id ? jobPositions.find((item) => item.id == id) : (isRecord(value) ? value as jobPosition : null)
+    if (!position) return null
+
+    const rawDepartment = (position as unknown as Record<string, unknown>).department
+    const positionDepartmentId = getEntityId(rawDepartment)
+    const positionDepartment = positionDepartmentId
+      ? departments.find((item) => item.id == positionDepartmentId)
+      : (isRecord(rawDepartment) ? rawDepartment as department : null)
+
+    if (!positionDepartment) return null
+
+    return {
+      ...position,
+      department: positionDepartment,
+    }
+  }
+
+  return history.flatMap((item) => {
+    const rawHistory = item as unknown as Record<string, unknown>
+    const employeeId = getEntityId(rawHistory.employee ?? rawHistory.employee_id)
+    const employee = employeeId
+      ? completeEmployees.find((currentEmployee) => currentEmployee.id == employeeId)
+      : null
+    const lastJobPosition = getCompleteJobPosition(rawHistory.last_job_position ?? rawHistory.last_job_position_id)
+    const newJobPosition = getCompleteJobPosition(rawHistory.new_job_position ?? rawHistory.new_job_position_id)
+
+    if (!employee || !lastJobPosition || !newJobPosition) {
+      return []
+    }
+
+    return [{
+      ...item,
+      employee,
+      last_job_position: lastJobPosition,
+      new_job_position: newJobPosition,
+    }]
+  })
+}
+
+const hydrateVacationData = (
+  requests: vacationRequest[],
+  details: vacationDetail[],
+  approvals: vacationApproval[],
+  records: EmployeeRecords | null,
+  employeeId?: number,
+) => {
+  const completeEmployees = hydrateEmployees(records)
+
+  const completeRequests = requests.flatMap((request) => {
+    const requestEmployeeId = getEntityId((request as unknown as Record<string, unknown>).employee)
+
+    if (employeeId && requestEmployeeId != employeeId) {
+      return []
+    }
+
+    const employee = requestEmployeeId
+      ? completeEmployees.find((item) => item.id == requestEmployeeId)
+      : null
+
+    if (!employee) return []
+
+    return [{
+      ...request,
+      employee,
+    }]
+  })
+
+  const completeDetails = details.flatMap((detail) => {
+    const requestId = getEntityId((detail as unknown as Record<string, unknown>).vacation_request)
+    const request = requestId
+      ? completeRequests.find((item) => item.id == requestId)
+      : null
+
+    if (!request) return []
+
+    return [{
+      ...detail,
+      vacation_request: request,
+    }]
+  })
+
+  const completeApprovals = approvals.flatMap((approval) => {
+    const requestId = getEntityId((approval as unknown as Record<string, unknown>).vacation_request)
+    const request = requestId
+      ? completeRequests.find((item) => item.id == requestId)
+      : null
+
+    if (!request) return []
+
+    return [{
+      ...approval,
+      vacation_request: request,
+    }]
+  })
+
+  return {
+    requests: completeRequests,
+    details: completeDetails,
+    approvals: completeApprovals,
+  }
+}
+
+const getDepartmentId = (value: unknown): number | null => {
+  return getEntityId(value)
+}
+
+const formatReadableDate = (value: string): string => {
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })
+}
+
 export default function Gestion_Empleados() {
   const [view, setView] = useState<viewType>('table')
   const [requestData, setRequestData] = useState<allData | null>(null)
@@ -137,15 +364,15 @@ export default function Gestion_Empleados() {
   useEffect(() => {
     if (data) {
       const nextRequestData = {
-        users: data[0].data as user[],
-        departments: data[1].data as department[],
-        jobPositions: data[2].data as jobPosition[],
-        employees: data[3].data as employee[],
+        users: fromBatch<user>(data, 0),
+        departments: fromBatch<department>(data, 1),
+        jobPositions: fromBatch<jobPosition>(data, 2),
+        employees: fromBatch<employee>(data, 3),
       }
 
       setRequestData(nextRequestData)
 
-      const parsedEmployees = parseEmployee([
+      const parsedEmployees = hydrateEmployees([
         nextRequestData.users,
         nextRequestData.departments,
         nextRequestData.jobPositions,
@@ -224,9 +451,7 @@ function TableView ({
   goTo,
   setEmployee,
 }: TableViewProps) {
-  const records: EmployeeRecords | null = data
-    ? [data.users, data.departments, data.jobPositions, data.employees]
-    : null
+  const records = toEmployeeRecords(data)
 
   const goToDetails = (employee: completeEmployee) => {
     setEmployee(employee)
@@ -267,7 +492,7 @@ function TableView ({
       { loading ? <Spinner /> : (
         <Table
           headers={["Nombre", "Departamento", "Puesto", "Estatus", "Acciones"]}
-          rows={parseEmployee(records)}
+          rows={hydrateEmployees(records)}
           trDrawer={trDrawer}
         />
       )}
@@ -290,9 +515,9 @@ function DetailsView ({
   const [requestData, setRequestData] = useState<{
     history: completeEmploymentHistory[]
     incidents: incident[]
-    vacationRequests: completeVacationRequest[]
-    vacationDetails: completeVacationDetail[]
-    vacationApprovals: completeVacationApproval[]
+    vacationRequests: ReturnType<typeof hydrateVacationData>["requests"]
+    vacationDetails: ReturnType<typeof hydrateVacationData>["details"]
+    vacationApprovals: ReturnType<typeof hydrateVacationData>["approvals"]
   }>({
     history: [],
     incidents: [],
@@ -300,10 +525,6 @@ function DetailsView ({
     vacationDetails: [],
     vacationApprovals: [],
   })
-
-  const asArray = <T,>(value: T | T[]): T[] => (
-    Array.isArray(value) ? value : [value]
-  )
 
   useEffect(() => {
     if (!employee?.id) return
@@ -319,22 +540,26 @@ function DetailsView ({
 
   useEffect(() => {
     if (data) {
-      const fromThisEmployee = (item: any) => (
-        (item.employee || item.employee_id) == employee?.id
+      const fromThisEmployee = (item: unknown) => {
+        const source = (item || {}) as Record<string, unknown>
+        const currentEmployeeId = getEntityId(source.employee ?? source.employee_id)
+        return currentEmployeeId == employee?.id
+      }
+
+      const vacationData = hydrateVacationData(
+        fromBatch<vacationRequest>(data, 2),
+        fromBatch<vacationDetail>(data, 3),
+        fromBatch<vacationApproval>(data, 4),
+        records,
+        employee?.id
       )
 
-      const vacationData = parseVacationRecords({
-        requests: asArray(data[2].data),
-        details: asArray(data[3].data),
-        approvals: asArray(data[4].data),
-      }, records, employee?.id)
-
       setRequestData({
-        history: parseEmploymentHistory(
-          asArray(data[0].data).filter(fromThisEmployee) as employmentHistory[],
+        history: hydrateEmploymentHistory(
+          fromBatch<employmentHistory>(data, 0).filter(fromThisEmployee),
           records
         ),
-        incidents: asArray(data[1].data).filter(fromThisEmployee) as incident[],
+        incidents: fromBatch<incident>(data, 1).filter(fromThisEmployee),
         vacationRequests: vacationData.requests,
         vacationDetails: vacationData.details,
         vacationApprovals: vacationData.approvals,
@@ -408,7 +633,7 @@ function DetailsView ({
             headers={["Fecha de cambio", "Departamento anterior", "Puesto anterior", "Nuevo departamento ", "Nuevo puesto"]}
             rows={requestData.history}
             trDrawer={(row: completeEmploymentHistory) => [
-              row.update_at,
+              formatReadableDate(row.update_at),
               row.last_job_position.department.name,
               row.last_job_position.name,
               row.new_job_position.department.name,
@@ -528,9 +753,8 @@ function NewEmployeeModal ({
   const [currentDepartment, setCurrentDepartment] = useState<number | null>(null)
   const [currentJobPosition, setCurrentJobPosition] = useState<string>("")
   const [formMode, setFormMode] = useState<"create" | "edit">("create")
-  const [submittedMode, setSubmittedMode] = useState<"create" | "edit" | null>(null)
 
-  const { execute, loading, error, data } = useApi<any>()
+  const { execute, loading, error } = useApi<any>()
 
   useEffect(() => {
     const modalElement = document.getElementById(newEmployeeModalId)
@@ -557,10 +781,15 @@ function NewEmployeeModal ({
 
     modalElement.addEventListener("shown.bs.modal", syncSelectStateFromForm)
 
+    // Sincronizar también cuando los departamentos cambian (cuando se cargan los datos)
+    if (departments.length > 0) {
+      syncSelectStateFromForm()
+    }
+
     return () => {
       modalElement.removeEventListener("shown.bs.modal", syncSelectStateFromForm)
     }
-  }, [])
+  }, [departments])
 
   const validate = (data: newEmployeeExpectedData): string | "ok" => {
     const { name, last_name, department, job_position, phone, email } = data
@@ -605,7 +834,8 @@ function NewEmployeeModal ({
     const originalJobPositionId = parseInt(originalJobPosition, 10)
     const newJobPositionId = parseInt(fd.job_position, 10)
     const normalizedMode: "create" | "edit" = mode == "edit" ? "edit" : "create"
-    setSubmittedMode(normalizedMode)
+
+    let result: any = null
 
     if (mode == "edit" && Number.isInteger(employeeId) && employeeId > 0) {
       const hasWorkAreaChanges = (
@@ -634,16 +864,16 @@ function NewEmployeeModal ({
         requests.push(
           employmentHistoryService.create({
             description: "Cambio de area/puesto desde gestión de empleados",
-            employee: employeeId,
-            last_job_position: originalJobPositionId,
-            new_job_position: newJobPositionId,
+            employee_id: employeeId,
+            last_job_position_id: originalJobPositionId,
+            new_job_position_id: newJobPositionId,
           })
         )
       }
 
-      execute(...requests)
+      result = await execute(...requests)
     } else {
-      execute(
+      result = await execute(
         employeeService.create({
           name: fd.name,
           last_name: fd.last_name,
@@ -654,60 +884,58 @@ function NewEmployeeModal ({
         })
       )
     }
-  }
 
-  useEffect(() => {
-    if (!submittedMode) return
-
-    if (data?.data) {
-      const successMessage = submittedMode == "edit"
-        ? "Empleado actualizado exitosamente."
-        : "Empleado registrado exitosamente. El empleado recibirá un correo para configurar su cuenta."
-
-      launchAlert("main-float-container",
-        <Alert icon="success" type="success">
-          {successMessage}
-        </Alert>
-      )
-      refreshData()
-      closeModal(newEmployeeModalId)
-      setSubmittedMode(null)
-      return
-    }
-
-    if (error) {
+    if (!result) {
       launchAlert("main-float-container",
         <Alert icon="error" type="danger">
           Ocurrió un error al cargar los datos. Intenta recargar la página.
         </Alert>
       )
-      console.error('Error on new modal component:', error)
-      setSubmittedMode(null)
+      return
     }
-  }, [data, error, submittedMode, refreshData])
+
+    const successMessage = normalizedMode == "edit"
+      ? "Empleado actualizado exitosamente."
+      : "Empleado registrado exitosamente. El empleado recibirá un correo para configurar su cuenta."
+
+    launchAlert("main-float-container",
+      <Alert icon="success" type="success">
+        {successMessage}
+      </Alert>
+    )
+
+    refreshData()
+    closeModal(newEmployeeModalId)
+  }
+
+  useEffect(() => {
+    if (!error) return
+
+    console.error('Error on new modal component:', error)
+  }, [error])
 
   const currentDepartmentValue = currentDepartment?.toString() || ""
 
   const departmentsOptions = [
-    <Option key={0} text="Seleccione un departamento" value="" disabled />,
+    <Option key="default-dept" text="Seleccione un departamento" value="" disabled />,
     ...(departments ? departments.map((d) => (
-      <Option key={d.id} text={d.name} value={d.id.toString()} />
+      <Option key={`dept-${d.id}`} text={d.name} value={d.id.toString()} />
     )) : [])
   ]
 
   const filteredJobPositions = jobPositions && currentDepartment
-    ? jobPositions.filter((jp) => jp.department == currentDepartment)
+    ? jobPositions.filter((jp) => getDepartmentId((jp as any).department) == currentDepartment)
     : []
 
   const jobPositionsOptions = [
     <Option
-      key={0}
+      key="default-jp"
       text={currentDepartment ? "Seleccione un puesto" : "Seleccione un departamento primero"}
       value=""
       disabled
     />,
     ...filteredJobPositions.map((jp) => (
-      <Option key={jp.id} text={jp.name} value={jp.id.toString()} />
+      <Option key={`jp-${jp.id}`} text={jp.name} value={jp.id.toString()} />
     ))
   ]
 

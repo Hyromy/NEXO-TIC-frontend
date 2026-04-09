@@ -8,11 +8,40 @@ import { Alert, launchAlert } from "../../components/Alert"
 import useApi from "../../hooks/useApi"
 import { announcementService, employeeService } from "../../services/nexotic"
 import { Spinner } from "../../components/Spinner"
+import { getAccessToken } from "../../utils/getters"
+import { decodeJWT } from "../../utils/jwt"
 
 type NuevoAvisoData = {
   titulo: string
   contenido: string
   prioridad: string
+}
+
+const asCollection = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) return value as T[]
+  if (!value || typeof value != "object") return []
+
+  const source = value as Record<string, unknown>
+  if (Array.isArray(source.results)) return source.results as T[]
+  if (Array.isArray(source.data)) return source.data as T[]
+
+  return []
+}
+
+const getEntityId = (value: unknown): number | null => {
+  if (typeof value == "number") return Number.isNaN(value) ? null : value
+
+  if (typeof value == "string") {
+    const parsed = parseInt(value, 10)
+    return Number.isNaN(parsed) ? null : parsed
+  }
+
+  if (value && typeof value == "object") {
+    const source = value as Record<string, unknown>
+    return getEntityId(source.id)
+  }
+
+  return null
 }
 
 export default function Nuevo_Aviso() {
@@ -90,34 +119,73 @@ export default function Nuevo_Aviso() {
       )
     }
 
+    const basePayload = {
+      title: fTitulo,
+      content: fContenido,
+      priority: fPrioridad,
+    }
+
+    if (isEdit) {
+      return execute(announcementService.update(parseInt(id!), basePayload))
+    }
+
     try {
-      const empResponse = await employeeService.getAll()
-      const employees = (empResponse as any) || []
-      const storedToken = localStorage.getItem("accessToken")
-      const payloadBase64 = storedToken?.split('.')[1] || ""
-      const decodedToken = JSON.parse(atob(payloadBase64))
-      const myUserId = decodedToken.user_id
+      const token = getAccessToken()
+      const decodedToken = token ? decodeJWT(token) : null
+      const tokenEmployeeId = getEntityId(
+        decodedToken?.employee_id ?? decodedToken?.employee ?? decodedToken?.id
+      )
+      const tokenUserId = getEntityId(
+        decodedToken?.user_id ?? decodedToken?.sub
+      )
 
-      const myEmployee = employees.find((e: any) => e.user.id == myUserId || e.user == myUserId)
+      const employeesResponse = await employeeService.getAll()
+      const employees = asCollection<any>(employeesResponse)
 
-      if (!myEmployee) {
-        return launchAlert("main-float-container", <Alert type="danger">Error de perfil.</Alert>)
+      const employeeByEmployeeId = tokenEmployeeId
+        ? employees.find((employee) => getEntityId(employee?.id) == tokenEmployeeId)
+        : null
+
+      const employeeByUserId = tokenUserId
+        ? employees.find((employee) => getEntityId(employee?.user) == tokenUserId)
+        : null
+
+      const authorId = getEntityId(
+        employeeByEmployeeId?.id ?? employeeByUserId?.id
+      )
+
+      if (authorId) {
+        return execute(announcementService.create({
+          ...basePayload,
+          author_id: authorId,
+        }))
       }
 
-      const payload = {
-        title: fTitulo,
-        content: fContenido,
-        priority: fPrioridad,
-        author_id: myEmployee.id
+      // Para usuarios staff sin registro en employees, intentamos crear sin author_id
+      // en caso de que el backend lo resuelva desde request.user.
+      const createWithoutAuthor = await execute(
+        announcementService.create(basePayload as any)
+      )
+
+      if (!createWithoutAuthor) {
+        console.warn("Could not resolve employee author id", {
+          tokenEmployeeId,
+          tokenUserId,
+          employeesCount: employees.length,
+          sampleEmployee: employees[0],
+        })
+        return launchAlert(
+          "main-float-container",
+          <Alert icon="warning" type="warning">
+            Tu usuario no tiene un empleado asociado para crear avisos. Solicita vincular tu cuenta en la tabla de empleados.
+          </Alert>
+        )
       }
 
-      if (isEdit) {
-        execute(announcementService.update(parseInt(id!), payload))
-      } else {
-        execute(announcementService.create(payload as any))
-      }
+      return
     } catch (err) {
-      console.error("Error:", err)
+      console.error("Error al crear/editar aviso:", err)
+      launchAlert("main-float-container", <Alert icon="error" type="danger">No fue posible guardar el aviso.</Alert>)
     }
   }
 

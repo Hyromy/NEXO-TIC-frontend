@@ -133,6 +133,7 @@ const normalizeEmployeeMutation = (data: Partial<EmployeeMutationData>) => {
   return {
     ...rest,
     job_position: normalizedJobPosition,
+    job_position_id: normalizedJobPosition,
   }
 }
 
@@ -438,22 +439,32 @@ export const employmentHistoryService = {
   create: (
     dataOrDescription: {
       description: string
-      employee: number
-      last_job_position: number
-      new_job_position: number
+      employee?: number
+      employee_id?: number
+      last_job_position?: number
+      last_job_position_id?: number
+      new_job_position?: number
+      new_job_position_id?: number
     } | string,
     employee?: number,
     last_job_position?: number,
     new_job_position?: number,
   ) => {
-    const payload = typeof dataOrDescription === "string"
+    const rawPayload = typeof dataOrDescription === "string"
       ? {
           description: dataOrDescription,
-          employee: employee ?? 0,
-          last_job_position: last_job_position ?? 0,
-          new_job_position: new_job_position ?? 0,
+          employee_id: employee ?? 0,
+          last_job_position_id: last_job_position ?? 0,
+          new_job_position_id: new_job_position ?? 0,
         }
       : dataOrDescription
+
+    const payload = {
+      ...rawPayload,
+      employee_id: rawPayload.employee_id ?? rawPayload.employee,
+      last_job_position_id: rawPayload.last_job_position_id ?? rawPayload.last_job_position,
+      new_job_position_id: rawPayload.new_job_position_id ?? rawPayload.new_job_position,
+    }
 
     return api.post(employmentHistoryService.endpoint, payload)
   },
