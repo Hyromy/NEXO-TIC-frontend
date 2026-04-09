@@ -19,6 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { decodeJWT } from "../../utils/jwt";
 import { getAccessToken } from "../../utils/getters";
+import Calendar from "react-calendar";
 
 interface TarjetaData {
   titulo: string;
@@ -70,11 +71,11 @@ export default function Vacaciones() {
       />
     );
   }
-  //FILTRADO: Buscamos al empleado para que no salgan datos de otros
+
   const myEmployee = Array.isArray(employees) 
     ? employees.find((e: any) => Number(e.user?.id || e.user) === Number(userId)) 
     : null;
-  // añadimos el filtro y solicitudes
+
   const tarjetas: TarjetaData[] =
     Array.isArray(data) && myEmployee
       ? data
@@ -86,6 +87,7 @@ export default function Vacaciones() {
             { titulo: "DIAS DISPONIBLES", valor: p.days_remaining },
           ]))[0] || [] 
       : [];
+
   const solicitudes: Solicitud[] =
     Array.isArray(dataRequests) && myEmployee
       ? dataRequests
@@ -108,20 +110,21 @@ export default function Vacaciones() {
                   variant="info" 
                   onClick={() =>
                     setSelectedSolicitud({
-                    nombre: `${myEmployee.user?.first_name} ${myEmployee.user?.last_name}`,
-                    fechaSolicitud: new Date(req.date || Date.now()).toLocaleDateString(),
-                    dias: detalles.length,
-                    estatus: req.status,
-                    comentario: req.notes || "Sin comentario",
-                    fechas: detalles.map((d: any) => {
-                      const dateObj = new Date(d.selected_day);
-                      return {
-                        dia: dateObj.getDate(),
-                        mes: dateObj.getMonth() + 1,
-                        anio: dateObj.getFullYear(),
-                      };
-                    }),
-                  })}
+                      nombre: `${myEmployee.user?.first_name} ${myEmployee.user?.last_name}`,
+                      fechaSolicitud: new Date(req.date || Date.now()).toLocaleDateString(),
+                      dias: detalles.length,
+                      estatus: req.status,
+                      comentario: req.notes || "Sin comentario",
+                      fechas: detalles.map((d: any) => {
+                        // FIX: Añadimos T00:00:00 para asegurar que se trate como fecha local y no UTC
+                        const dateObj = new Date(d.selected_day + "T00:00:00");
+                        return {
+                          dia: dateObj.getDate(),
+                          mes: dateObj.getMonth() + 1,
+                          anio: dateObj.getFullYear(),
+                        };
+                      }),
+                    })}
                 >
                   Detalles
                 </Button>
@@ -169,12 +172,12 @@ function TarjetasVacaciones({ data }: { data: TarjetaData[] }) {
 }
 
 function BotonSolicitar() {
-const navigate = useNavigate();
+  const navigate = useNavigate();
   return (
     <div>
       <Button
         variant="primary"
-       onClick={() => navigate("/requests")}
+        onClick={() => navigate("/requests")}
       >
         Solicitar Vacaciones
       </Button>
@@ -215,6 +218,106 @@ function __VacacionesLayout({ tarjetas, boton, tabla }: VacacionesLayoutProps) {
   );
 }
 
+function CalendarioVista({ fechas }: { fechas: FechaDetalle[] }) {
+  // Inicialización perezosa para evitar errores de renderizado en cascada
+  const [currentMonth, setCurrentMonth] = useState(() => 
+    fechas.length > 0 ? fechas[0].mes : new Date().getMonth() + 1
+  );
+  const [currentYear, setCurrentYear] = useState(() => 
+    fechas.length > 0 ? fechas[0].anio : new Date().getFullYear()
+  );
+
+  // Sincronizar si las fechas cambian (al abrir otra solicitud)
+  useEffect(() => {
+    if (fechas.length > 0) {
+      setCurrentMonth(fechas[0].mes);
+      setCurrentYear(fechas[0].anio);
+    }
+  }, [fechas]);
+
+  if (fechas.length === 0) return <p>No hay fechas seleccionadas</p>;
+
+  const diasSemana = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+  const mesIndice = currentMonth - 1;
+  const nombreMes = new Intl.DateTimeFormat("es-ES", { month: "long" })
+    .format(new Date(currentYear, mesIndice)).toUpperCase();
+
+  const primerDiaMes = new Date(currentYear, mesIndice, 1).getDay();
+  const totalDiasMes = new Date(currentYear, mesIndice + 1, 0).getDate();
+
+  const diasArr: (number | null)[] = [];
+  for (let i = 0; i < primerDiaMes; i++) diasArr.push(null);
+  for (let d = 1; d <= totalDiasMes; d++) diasArr.push(d);
+
+  const semanasArr = [];
+  for (let i = 0; i < diasArr.length; i += 7) {
+    semanasArr.push(diasArr.slice(i, i + 7));
+  }
+
+  const esSeleccionado = (dia: number) =>
+    fechas.some(f => f.dia === dia && f.mes === currentMonth && f.anio === currentYear);
+
+  const cambiarMes = (direccion: "ant" | "sig") => {
+    let nuevoMes = currentMonth + (direccion === "sig" ? 1 : -1);
+    let nuevoAnio = currentYear;
+    if (nuevoMes > 12) { nuevoMes = 1; nuevoAnio++; }
+    else if (nuevoMes < 1) { nuevoMes = 12; nuevoAnio--; }
+    setCurrentMonth(nuevoMes);
+    setCurrentYear(nuevoAnio);
+  };
+
+  return (
+    <Card header="VISUALIZACIÓN DE DÍAS">
+      <StackContainer gap={3}>
+        <RowContainer>
+          <ColContainer defaultSize={3}>
+            <Button variant="info" size="sm" onClick={() => cambiarMes("ant")}>
+              Anterior
+            </Button>
+          </ColContainer>
+          <ColContainer defaultSize={6}>
+            <div style={{ textAlign: 'center' }}>
+              {nombreMes} {currentYear}
+            </div>
+          </ColContainer>
+          <ColContainer defaultSize={3}>
+            <div style={{ textAlign: 'right' }}>
+              <Button variant="info" size="sm" onClick={() => cambiarMes("sig")}>
+                Siguiente
+              </Button>
+            </div>
+          </ColContainer>
+        </RowContainer>
+
+        <Table
+          headers={diasSemana}
+          rows={semanasArr}
+          trDrawer={(semana: (number | null)[]) =>
+            semana.map((dia, index) => {
+              if (!dia) return <div key={index} />;
+              const selected = esSeleccionado(dia);
+              return (
+                <div
+                  key={index}
+                  style={{
+                    textAlign: "center",
+                    padding: "5px",
+                    // Solo mantenemos la lógica mínima para diferenciar el día seleccionado
+                    backgroundColor: selected ? "#007bff" : "transparent",
+                    color: selected ? "white" : "inherit",
+                    borderRadius: "4px"
+                  }}
+                >
+                  {dia}
+                </div>
+              );
+            })
+          }
+        />
+      </StackContainer>
+    </Card>
+  );
+}
 function DetalleSolicitud({ solicitud, onVolver }: { solicitud: any; onVolver: () => void }) {
   const fechas: FechaDetalle[] = solicitud.fechas || [];
   return (
@@ -247,11 +350,7 @@ function DetalleSolicitud({ solicitud, onVolver }: { solicitud: any; onVolver: (
                     />
                   </ColContainer>
                   <ColContainer md={6}>
-                    <Card>
-                      <StackContainer center height={150}>
-                        <p>calendario</p>
-                      </StackContainer>
-                    </Card>
+                    <CalendarioVista fechas={fechas} />
                   </ColContainer>
                 </RowContainer>
               </Card>
