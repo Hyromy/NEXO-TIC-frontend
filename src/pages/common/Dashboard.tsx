@@ -29,12 +29,75 @@ const defaultHeight = 192
 const defaultPadding = 2
 const defaultGap = 3
 
+const asCollection = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) return value as T[]
+  if (!value || typeof value != "object") return []
+
+  const source = value as Record<string, unknown>
+  if (Array.isArray(source.results)) return source.results as T[]
+  if (Array.isArray(source.data)) return source.data as T[]
+
+  return []
+}
+
+const isAnnouncementEnabled = (value: unknown) => {
+  if (value == null) return true
+  if (typeof value == "boolean") return value
+  if (typeof value == "string") return value.toLowerCase() != "false"
+  return Boolean(value)
+}
+
+const sortByDateDesc = <T extends Record<string, unknown>>(items: T[]) => {
+  return [...items].sort((a, b) => {
+    const aDate = new Date(String(a.date || "")).getTime()
+    const bDate = new Date(String(b.date || "")).getTime()
+    return bDate - aDate
+  })
+}
+
+const mapAnnouncementsToAlerts = (
+  announcements: any[],
+  options?: { withPriority?: boolean }
+): AlertObject[] => {
+  const withPriority = options?.withPriority !== false
+
+  const priorityIcons: Record<string, icons> = {
+    Alta: "warning",
+    Media: "warning",
+    Baja: "info",
+  }
+
+  const priorityVariants: Record<string, variants> = {
+    Alta: "danger",
+    Media: "warning",
+    Baja: "info",
+  }
+
+  return sortByDateDesc(announcements)
+    .filter((a) => isAnnouncementEnabled(a?.enabled))
+    .map((a) => {
+      const title = String(a?.title || "Aviso")
+      const content = String(a?.content || "")
+
+      return {
+        icon: withPriority ? (priorityIcons[a?.priority] || "info") : "info",
+        variant: withPriority ? (priorityVariants[a?.priority] || "info") : "info",
+        children: (
+          <div key={a?.id || `${title}-${content}`}>
+            <strong>{title}</strong>
+            {content ? <div>{content}</div> : null}
+          </div>
+        )
+      }
+    })
+}
+
 export default function Dashboard() {
   const { canAccessEmployee, canAccessRRHH } = useUser()
 
   const main = () => {
-    if (canAccessEmployee()) return <EmployeeDashboard />
     if (canAccessRRHH()) return <RRHHDashboard />
+    if (canAccessEmployee()) return <EmployeeDashboard />
     return <Navigate to="/" />
   }
 
@@ -174,60 +237,42 @@ function EmployeeDashboard() {
 
  useEffect(() => {
     const loadDashboardData = async () => {
-      if (!userId) return
       try {
+        const annRes = await fetchData(announcementService.getAll())
+        const announcements = asCollection<any>(annRes)
+        setNotices(mapAnnouncementsToAlerts(announcements, { withPriority: true }))
+
+        if (!userId) return
+
         const empRes = await fetchData(employeeService.getAll())
-        const employee = Array.isArray(empRes) 
-          ? empRes.find((e: any) => Number(e.user?.id || e.user) === Number(userId)) 
-          : null
+        const employees = asCollection<any>(empRes)
+        const employee = employees.find((e: any) => Number(e.user?.id || e.user) === Number(userId))
 
-        if (employee) {
-          const [periodRes, reqRes, incRes, annRes] = await Promise.all([
-            fetchData(vacationPeriodService.getAll()),
-            fetchData(vacationRequestService.getAll()),
-            fetchData(incidentService.getAll()),
-            fetchData(announcementService.getAll())
-          ])
+        if (!employee) return
 
-          const priorityIcons: Record<string, any> = {
-            Alta: "warning",
-            Media: "warning", // O el icono que prefieras para media
-            Baja: "info",
-          };
+        const [periodRes, reqRes, incRes] = await Promise.all([
+          fetchData(vacationPeriodService.getAll()),
+          fetchData(vacationRequestService.getAll()),
+          fetchData(incidentService.getAll())
+        ])
 
-          const priorityVariants: Record<string, any> = {
-            Alta: "danger",    // Rojo
-            Media: "warning",  // Amarillo/Naranja
-            Baja: "info",     // Azul/Cyan
-          };
+        const periods = asCollection<any>(periodRes)
+        const requests = asCollection<any>(reqRes)
+        const incidentsData = asCollection<any>(incRes)
 
-          const myPeriod = Array.isArray(periodRes) 
-            ? periodRes.find((p: any) => (p.employee?.id || p.employee) === employee.id)
-            : null
-          setPendingHolidays(myPeriod?.days_remaining || 0)
+        const myPeriod = periods.find((p: any) => (p.employee?.id || p.employee) === employee.id)
+        setPendingHolidays(myPeriod?.days_remaining || 0)
 
-          if (Array.isArray(reqRes)) {
-            setPendingRequests(reqRes
-              .filter((r: any) => (r.employee?.id || r.employee) === employee.id && r.status === "pending")
-              .map((r: any) => `Solicitud #${r.id} - ${new Date(r.date).toLocaleDateString()}`)
-            )
-          }
+        setPendingRequests(requests
+          .filter((r: any) => (r.employee?.id || r.employee) === employee.id && r.status === "pending")
+          .map((r: any) => `Solicitud #${r.id} - ${new Date(r.date).toLocaleDateString()}`)
+        )
 
-          if (Array.isArray(incRes)) {
-            setIncidents(incRes
-              .filter((i: any) => (i.employee?.id || i.employee) === employee.id && i.enabled)
-              .map((i: any) => ({ title: i.type, date: new Date(i.date).toLocaleDateString() }))
-            )
-          }
+        setIncidents(incidentsData
+          .filter((i: any) => (i.employee?.id || i.employee) === employee.id && i.enabled)
+          .map((i: any) => ({ title: i.type, date: new Date(i.date).toLocaleDateString() }))
+        )
 
-          if (Array.isArray(annRes)) {
-            setNotices(annRes.filter((a: any) => a.enabled).map((a: any) => ({
-              icon: (priorityIcons[a.priority] || "info") as icons,
-              variant: (priorityVariants[a.priority] || "info") as variants,
-              children: <div key={a.id}><strong>{a.title}</strong><div>{a.content}</div></div>
-            })))
-          }
-        }
       } catch (e) { console.error(e) }
     }
     loadDashboardData()
@@ -290,23 +335,23 @@ function RRHHDashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [reqs, incs, periods, anns] = await Promise.all([
+        const anns = await fetchData(announcementService.getAll())
+        const announcements = asCollection<any>(anns)
+        setNotices(mapAnnouncementsToAlerts(announcements, { withPriority: true }))
+
+        const [reqs, incs, periods] = await Promise.all([
           fetchData(vacationRequestService.getAll()),
           fetchData(incidentService.getAll()),
           fetchData(vacationPeriodService.getAll()),
-          fetchData(announcementService.getAll())
         ])
 
-        setPendingRequests(Array.isArray(reqs) ? reqs.filter((r: any) => r.status === "pending").length : 0)
-        setPendingIncidents(Array.isArray(incs) ? incs.filter((i: any) => i.enabled).length : 0)
-        setDaysForHolidays(Array.isArray(periods) ? periods.reduce((acc: number, p: any) => acc + (p.days_remaining || 0), 0) : 0)
+        const requests = asCollection<any>(reqs)
+        const incidentsData = asCollection<any>(incs)
+        const periodsData = asCollection<any>(periods)
 
-        const mapped = Array.isArray(anns) ? anns.map((a: any) => ({
-          icon: "info" as icons,
-          variant: "info" as variants,
-          children: <strong>{a.title}</strong>
-        })) : []
-        setNotices(mapped)
+        setPendingRequests(requests.filter((r: any) => r.status === "pending").length)
+        setPendingIncidents(incidentsData.filter((i: any) => i.enabled).length)
+        setDaysForHolidays(periodsData.reduce((acc: number, p: any) => acc + (p.days_remaining || 0), 0))
 
       } catch (e) { console.error(e) }
     }

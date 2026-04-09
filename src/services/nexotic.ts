@@ -691,7 +691,7 @@ export const announcementService = {
     title: string
     content: string
     priority: string
-    author_id: number
+    author_id?: number
     enabled?: boolean
   }) =>
     api.post(announcementService.endpoint, data),

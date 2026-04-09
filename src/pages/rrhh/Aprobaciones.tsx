@@ -260,7 +260,7 @@ function HolidayView({ item, goBackButton }: SomeViewProps) {
         </ColContainer>
         <ColContainer lg={4}>
           <Card header="Comentario">
-            <TextField name="comments" type="area" rows={12} value={holiday.raw?.notes || "Sin notas."} readOnly />
+            <TextField name="comments" type="area" rows={12} value={holiday.raw?.notes || "Sin notas."} readonly />
           </Card>
         </ColContainer>
       </RowContainer>

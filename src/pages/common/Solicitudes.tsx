@@ -29,6 +29,17 @@ const defaultGap = 4;
 const defaultMinStep = 0;
 const defaultMaxStep = 2;
 
+const asCollection = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) return value as T[];
+  if (!value || typeof value !== "object") return [];
+
+  const source = value as Record<string, unknown>;
+  if (Array.isArray(source.results)) return source.results as T[];
+  if (Array.isArray(source.data)) return source.data as T[];
+
+  return [];
+};
+
 const defaultState = {
   step: defaultMinStep,
   canContinue: false,
@@ -66,22 +77,21 @@ export default function Solicitudes() {
       if (!userId) return;
       try {
         const empRes = await fetchData(employeeService.getAll());
-        const employee = Array.isArray(empRes)
-          ? empRes.find(
-              (e: any) => Number(e.user?.id || e.user) === Number(userId),
-            )
-          : null;
+        const employees = asCollection<any>(empRes);
+        const employee = employees.find(
+          (e: any) => Number(e.user?.id || e.user) === Number(userId),
+        );
 
         if (employee) {
           setRealEmployeeId(employee.id);
           const periodRes = await fetchData(vacationPeriodService.getAll());
-          const periods = Array.isArray(periodRes) ? periodRes : [];
+          const periods = asCollection<any>(periodRes);
 
           if (periods.length > 0) {
-            const currentPeriod = periods.find(
-              (p: any) =>
-                Number(p.employee?.id || p.employee) === Number(employee.id),
-            );
+            const currentPeriod = periods
+              .filter((p: any) => Number(p.employee?.id || p.employee) === Number(employee.id))
+              .sort((a: any, b: any) => Number(b.year || 0) - Number(a.year || 0))[0];
+
             setAvailableDays(currentPeriod?.days_remaining || 0);
           }
         }

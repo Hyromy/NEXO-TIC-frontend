@@ -19,7 +19,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { decodeJWT } from "../../utils/jwt";
 import { getAccessToken } from "../../utils/getters";
-import Calendar from "react-calendar";
 
 interface TarjetaData {
   titulo: string;
@@ -45,6 +44,17 @@ interface FechaDetalle {
   mes: number;
   anio: number;
 }
+
+const asCollection = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) return value as T[];
+  if (!value || typeof value !== "object") return [];
+
+  const source = value as Record<string, unknown>;
+  if (Array.isArray(source.results)) return source.results as T[];
+  if (Array.isArray(source.data)) return source.data as T[];
+
+  return [];
+};
 
 export default function Vacaciones() {
   const [selectedSolicitud, setSelectedSolicitud] = useState<any>(null);
@@ -72,14 +82,14 @@ export default function Vacaciones() {
     );
   }
 
-  const myEmployee = Array.isArray(employees) 
-    ? employees.find((e: any) => Number(e.user?.id || e.user) === Number(userId)) 
-    : null;
+  const allEmployees = asCollection<any>(employees);
+  const myEmployee = allEmployees.find((e: any) => Number(e.user?.id || e.user) === Number(userId));
 
   const tarjetas: TarjetaData[] =
-    Array.isArray(data) && myEmployee
-      ? data
+    myEmployee
+      ? asCollection<any>(data)
           .filter((p: any) => (p.employee?.id || p.employee) === myEmployee.id)
+          .sort((a: any, b: any) => Number(b.year || 0) - Number(a.year || 0))
           .map((p: any) => ([
             { titulo: "AÑO", valor: p.year },
             { titulo: "DIAS ASIGNADOS", valor: p.days_assigned },
@@ -89,15 +99,14 @@ export default function Vacaciones() {
       : [];
 
   const solicitudes: Solicitud[] =
-    Array.isArray(dataRequests) && myEmployee
-      ? dataRequests
+    myEmployee
+      ? asCollection<any>(dataRequests)
           .filter((req: any) => (req.employee?.id || req.employee) === myEmployee.id)
           .map((req: any) => {
-            const detalles = Array.isArray(dataDetails)
-              ? dataDetails.filter((d: any) => 
+            const detalles = asCollection<any>(dataDetails)
+              .filter((d: any) => 
                   (d.vacation_request?.id || d.vacation_request_id || d.vacation_request) === req.id
-                )
-              : [];
+                );
 
             return {
               id: `Solicitud #${req.id}`,

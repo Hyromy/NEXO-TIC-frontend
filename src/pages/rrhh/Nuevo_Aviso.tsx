@@ -164,22 +164,17 @@ export default function Nuevo_Aviso() {
       // Para usuarios staff sin registro en employees, intentamos crear sin author_id
       // en caso de que el backend lo resuelva desde request.user.
       const createWithoutAuthor = await execute(
-        announcementService.create(basePayload as any)
+        announcementService.create(basePayload)
       )
 
       if (!createWithoutAuthor) {
-        console.warn("Could not resolve employee author id", {
+        console.warn("Could not resolve announcement author id", {
           tokenEmployeeId,
           tokenUserId,
           employeesCount: employees.length,
           sampleEmployee: employees[0],
         })
-        return launchAlert(
-          "main-float-container",
-          <Alert icon="warning" type="warning">
-            Tu usuario no tiene un empleado asociado para crear avisos. Solicita vincular tu cuenta en la tabla de empleados.
-          </Alert>
-        )
+        return
       }
 
       return
@@ -194,7 +189,7 @@ export default function Nuevo_Aviso() {
       <Card shadow>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h3>{isEdit ? "Editar aviso" : "Nuevo aviso"}</h3>
-          <Button variant="secondary" onClick={() => navigate("/notices")} disabled={loading}>
+          <Button variant="secondary" onClick={() => { if (!loading) navigate("/notices") }}>
             Volver
           </Button>
         </div>
