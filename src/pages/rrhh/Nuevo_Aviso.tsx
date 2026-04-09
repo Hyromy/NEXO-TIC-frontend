@@ -4,6 +4,7 @@ import Main from "../../layout/Main"
 import { Card } from "../../components/Card"
 import { Button } from "../../components/Button"
 import { Form, TextField, Select, Option } from "../../components/Form"
+import { Alert, launchAlert } from "../../components/Alert"
 
 type NuevoAvisoData = {
   titulo: string
@@ -18,11 +19,19 @@ export default function Nuevo_Aviso() {
     const { titulo, contenido, prioridad } = data
 
     if (!titulo || !contenido || !prioridad) {
-      alert("Todos los campos son obligatorios.")
-      return
+      return launchAlert("main-float-container",
+        <Alert icon="warning" type="warning">
+          Todos los campos son obligatorios.
+        </Alert>
+      )
     }
 
-    alert("Aviso creado correctamente.")
+    launchAlert("main-float-container",
+      <Alert icon="success" type="success">
+        Aviso creado correctamente.
+      </Alert>
+    )
+    // la alerta apenas es visible por la redirección
     navigate("/notices")
   }
 

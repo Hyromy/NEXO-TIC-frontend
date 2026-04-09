@@ -17,7 +17,9 @@ import { Button } from "../components/Button"
 import { Spinner } from "../components/Spinner"
 import { Card } from "../components/Card"
 
-import { StackContainer } from "../layout/Containers"
+import { FloatContainer, StackContainer } from "../layout/Containers"
+
+import { Alert, launchAlert } from "../components/Alert"
 
 type expectedData = {
   username: string,
@@ -34,12 +36,28 @@ const validate = (data: expectedData) => {
   return "ok"
 }
 
+const translateError = (err: string) => {
+  if (err.includes("No active account")) {
+    return {
+      known: true,
+      message: "Credenciales inválidas. Por favor, verifica tu usuario y contraseña."
+    }
+  }
+
+  return {
+    known: false,
+    message: "Ocurrió un error inesperado. Por favor, intenta de nuevo más tarde."
+  }
+}
+
 export default function Login() {
   const { data, error, execute } = useApi<any>()
   const { checkAuth } = useAuth()
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(false)
+
+  const alertContainerId = "alert-container-login"
 
   useEffect(() => {
     if (data && data.access && data.refresh) {
@@ -48,15 +66,27 @@ export default function Login() {
       navigate(rawRoutes.common.home)
     }
     if (error) {
-      console.error(error)
-      alert("Error iniciando sesión: " + error)
+      const { known, message } = translateError(error)
+      if (!known) {
+        console.error("Login error:", error)
+      }
+      launchAlert(alertContainerId, 
+        <Alert icon={known ? "warning" : "error"} type={known ? "warning" : "danger"} notDismissible>
+          {message}
+        </Alert>
+      )
     }
   }, [data, error])
 
   const handleSubmit = (data: expectedData) => {
     const validationError = validate(data)
     if (validationError != "ok") {
-      alert("Error de validación: " + validationError)
+      const variant = "warning"
+      launchAlert(alertContainerId, 
+        <Alert icon={variant} type={variant} notDismissible>
+          {validationError}
+        </Alert>
+      )
       return
     }
 
@@ -90,6 +120,7 @@ export default function Login() {
           <small>¿Olvidaste tu contraseña? <a href={rawRoutes.index.recovery}>Recupérala aquí</a></small>
         </StackContainer>
       </Card>
+      <FloatContainer id={alertContainerId} />
     </main>
   )
 }

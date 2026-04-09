@@ -21,6 +21,8 @@ import {
 } from "../../services/nexotic";
 import { getAccessToken } from "../../utils/getters";
 import { decodeJWT } from "../../utils/jwt";
+
+import { Alert, launchAlert } from "../../components/Alert"
 import Calendar from "react-calendar";
 const defaultHorizontalPadding = 5;
 const defaultGap = 4;
@@ -105,7 +107,14 @@ export default function Solicitudes() {
     setStep(currentStep);
   };
   const handleSend = async () => {
-    if (!realEmployeeId) return;
+    if (!realEmployeeId) {
+      return launchAlert("main-float-container",
+        <Alert type="danger" icon="error">
+          No se pudo identificar su perfil de empleado.
+        </Alert>,
+      )
+    }
+
     try {
       const requestRes = await createRequest(
         vacationRequestService.create({
@@ -114,21 +123,36 @@ export default function Solicitudes() {
         }),
       );
 
-      if (requestRes && !requestRes.error) {
-        for (const day of data.schedule) {
-          const dateObj = new Date(day);
-          const formattedDate = dateObj.toISOString().split("T")[0];
-
-          await createDetail(
-            vacationDetailService.create({
-              selected_day: formattedDate,
-              vacation_request_id: requestRes.id,
-            }),
-          );
-        }
-        alert("¡Solicitud enviada con éxito!");
-        navigate("/holidays");
+      if (!requestRes || requestRes.error) {
+        return launchAlert("main-float-container",
+          <Alert type="danger" icon="error">
+            Error al crear la solicitud: {requestRes?.message || "Servidor no responde"}
+          </Alert>,
+        )
       }
+
+      for (const day of data.schedule) {
+        // Formatear a YYYY-MM-DD
+        const dateObj = new Date(day);
+        const formattedDate = dateObj.toISOString().split("T")[0];
+
+        await createDetail(
+          vacationDetailService.create({
+            selected_day: formattedDate,
+            vacation_request_id: requestRes.id,
+          }),
+        );
+      }
+
+      launchAlert("main-float-container",
+        <Alert type="success" icon="success">
+          Solicitud enviada correctamente.
+        </Alert>,
+      )
+      setData(defaultState.data)
+      setCanContinue(defaultState.canContinue)
+      setStep(defaultMinStep)
+      navigate("/holidays");
     } catch (e) {
       console.error(e);
     }
@@ -199,7 +223,13 @@ export default function Solicitudes() {
               <Button
                 size="lg"
                 h_padding={defaultHorizontalPadding}
-                onClick={isEnd ? handleSend : () => changeStep(true)}
+                onClick={() => {
+                  if (isEnd) {
+                    void handleSend()
+                    return
+                  }
+                  changeStep(true)
+                }}
                 variant={isEnd ? "success" : "primary"}
                 isLoading={!canContinue}
               >

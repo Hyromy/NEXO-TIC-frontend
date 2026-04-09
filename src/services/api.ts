@@ -27,6 +27,7 @@ export type ApiResponse<T> = T | {
   error: true
   message: string
   status?: number
+  object?: any
   originalError?: any
 }
 
@@ -87,7 +88,7 @@ export async function request<T>(
   try {
     const response = await fetch(endpoint, config)
 
-    if (response.status == 401) {
+    if (response.status == 401 && !ignoreAuth) {
       const refreshed = await refreshAccessToken()
       
       if (refreshed) {
@@ -137,7 +138,7 @@ export async function request<T>(
     return {
       error: true,
       message: err.message || "Network error",
-      originalError: err
+      object: err
     }
   }
 }
