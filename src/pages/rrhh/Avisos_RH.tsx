@@ -1,63 +1,112 @@
+import { useEffect, useState } from "react" // Agregamos useState
 import Main from "../../layout/Main"
 import { Card } from "../../components/Card"
 import { Button } from "../../components/Button"
 import { useNavigate } from "react-router-dom"
+import useApi from "../../hooks/useApi"
+import { Spinner } from "../../components/Spinner"
+import { StackContainer } from "../../layout/Containers"
+import { Badge } from "../../components/Badge"
+import { Alert, launchAlert } from "../../components/Alert" // Agregamos Alert
+import { openModal, closeModal, Modal } from "../../components/Modal" // Agregamos Modal
 
-import { type Aviso } from "./types"
-
-const AVISOS_INICIALES: Aviso[] = [
-  {
-    id: 1,
-    tipo: "Urgente",
-    titulo: "Todos los empleados deben presentarse a pruebas médicas",
-    contenido: "Las pruebas se realizarán del 18/03/2026 al 29/03/2026 de 13:30 hrs a 16:00 hrs.",
-    tiempo: "Publicado hace 6 horas"
-  },
-  {
-    id: 2,
-    tipo: "Aviso importante",
-    titulo: "Suspensión de labores por mantenimiento",
-    contenido: "El próximo viernes 06/02/2026 a las 14:00 hrs las labores se suspenderán hasta el día siguiente por mantenimiento.",
-    tiempo: "Publicado hace 2 horas"
-  },
-  {
-    id: 3,
-    tipo: "Informe",
-    titulo: "Suspensión oficial y celebración interna",
-    contenido: "Recuerda que este martes 16/09/2026 por disposición oficial se suspenden labores y el 27/09/2026 tendremos nuestra celebración “Tarde Mexica”.",
-    tiempo: "Publicado hace 3 días"
-  },
-  {
-    id: 4,
-    tipo: "Aviso importante",
-    titulo: "Revisión de equipo de cómputo",
-    contenido: "Se realizará revisión de equipo de cómputo en el área administrativa durante esta semana.",
-    tiempo: "Publicado hace 5 días"
-  }
-]
+import { announcementService } from "../../services/nexotic"
+import { type Announcement } from "../../types/Announcement"
+import { type variants } from "../../components/variants"
 
 export default function Avisos_RH() {
   const navigate = useNavigate()
+  const { data, loading, execute } = useApi<Announcement[]>()
+  
+  // --- NUEVO: Estado para eliminación ---
+  const [selectedAviso, setSelectedAviso] = useState<Announcement | null>(null)
+  const deleteModalId = "confirm-delete-announcement"
 
-  const avisosRecientes = AVISOS_INICIALES.slice(0, 3)
+  useEffect(() => {
+    execute(announcementService.getAll())
+  }, [])
 
-  const getIcono = (tipo: Aviso["tipo"]) => {
-    if (tipo === "Urgente") return "🚨"
-    if (tipo === "Aviso importante") return "⚠️"
+  const todosLosAvisos = (data || []) as Announcement[]
+
+  // Lógica de filtrado: Anuncios de los últimos 5 días
+  const avisosRecientes = todosLosAvisos.filter((aviso) => {
+    const fechaAviso = new Date(aviso.date || new Date()) 
+    const hoy = new Date()
+    const diferenciaMs = hoy.getTime() - fechaAviso.getTime()
+    const diferenciaDias = diferenciaMs / (1000 * 60 * 60 * 24)
+    return diferenciaDias <= 5
+  })
+
+  // --- NUEVO: Función para eliminar ---
+  const handleDelete = async () => {
+    if (!selectedAviso) return
+    
+    try {
+      await announcementService.delete(selectedAviso.id)
+      launchAlert("main-float-container", <Alert type="success">Aviso eliminado correctamente.</Alert>)
+      closeModal(deleteModalId)
+      execute(announcementService.getAll()) // Refrescar lista
+    } catch (err) {
+      launchAlert("main-float-container", <Alert type="danger">Error al eliminar el aviso.</Alert>)
+    }
+  }
+
+  const getIcono = (prioridad: string) => {
+    if (prioridad === "Alta") return "🚨"
+    if (prioridad === "Media") return "⚠️"
+    if (prioridad === "Baja") return "ℹ️"
     return "📢"
   }
 
-  const renderAviso = (aviso: Aviso) => (
+  const badgeTypes: Record<string, variants> = {
+    Alta: "danger",   // Rojo
+    Media: "warning", // Amarillo
+    Baja: "primary",  // Azul
+  };
+
+  const renderAviso = (aviso: Announcement) => (
     <Card key={aviso.id} padding={3}>
-      <p className="fw-bold mb-2">
-        {getIcono(aviso.tipo)} {aviso.tipo}: {aviso.titulo}
-      </p>
-
-      <p className="mb-2">
-        {aviso.contenido}
-      </p>
-
-      <small className="text-muted">{aviso.tiempo}</small>
+      <div className="d-flex justify-content-between align-items-start">
+        <div>
+          <p className="fw-bold mb-2">
+            {getIcono(aviso.priority)} {aviso.priority}: {aviso.title}
+          </p>
+          <p className="mb-2">
+            {aviso.content}
+          </p>
+        </div>
+        <Badge 
+          type={badgeTypes[aviso.priority] || "primary"} 
+          text={aviso.priority} 
+        />
+      </div>
+      
+      <div className="d-flex justify-content-between align-items-center mt-2">
+        <small className="text-muted">Publicado el: {new Date(aviso.date || "").toLocaleDateString()}</small>
+        
+        {/* --- NUEVO: Botones de Acción --- */}
+        <div className="d-flex gap-2">
+          <Button 
+            variant="info"
+            outLine
+            size="sm"
+            onClick={() => navigate(`/notices/edit/${aviso.id}`)}
+          >
+            Editar
+          </Button>
+          <Button 
+            variant="danger"
+            outLine
+            size="sm"
+            onClick={() => {
+              setSelectedAviso(aviso);
+              openModal(deleteModalId);
+            }}
+          >
+            Eliminar
+          </Button>
+        </div>
+      </div>
     </Card>
   )
 
@@ -66,31 +115,56 @@ export default function Avisos_RH() {
       <Card shadow>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h3>Avisos</h3>
-
-          <Button
-            variant="primary"
-            onClick={() => navigate("/notices/new")}
-          >
+          <Button variant="primary" onClick={() => navigate("/notices/new")}>
             Nuevo aviso
           </Button>
         </div>
 
-        <div className="mb-4">
-          <h5 className="mb-3">Recientes (5 días anteriores a la fecha actual)</h5>
+        {loading ? (
+          <StackContainer center>
+            <Spinner />
+          </StackContainer>
+        ) : (
+          <>
+            <div className="mb-4">
+              <h5 className="mb-3">Recientes (Últimos 5 días)</h5>
+              <div className="d-flex flex-column gap-3">
+                {avisosRecientes.length > 0 ? (
+                  avisosRecientes.map(renderAviso)
+                ) : (
+                  <p className="text-muted italic">No hay avisos recientes.</p>
+                )}
+              </div>
+            </div>
 
-          <div className="d-flex flex-column gap-3">
-            {avisosRecientes.map(renderAviso)}
-          </div>
-        </div>
-
-        <div>
-          <h5 className="mb-3">Todos los anuncios</h5>
-
-          <div className="d-flex flex-column gap-3">
-            {AVISOS_INICIALES.map(renderAviso)}
-          </div>
-        </div>
+            <div>
+              <h5 className="mb-3">Todos los anuncios</h5>
+              <div className="d-flex flex-column gap-3">
+                {todosLosAvisos.length > 0 ? (
+                  todosLosAvisos.map(renderAviso)
+                ) : (
+                  <p className="text-muted">No hay anuncios publicados.</p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </Card>
+
+      {/* --- NUEVO: Modal de Confirmación --- */}
+      <Modal id={deleteModalId} header="Eliminar Aviso">
+        <StackContainer gap={3}>
+          <p>¿Estás seguro de que deseas eliminar el aviso <strong>"{selectedAviso?.title}"</strong>? Esta acción no se puede deshacer.</p>
+          <div className="d-flex justify-content-end gap-2">
+            <Button variant="secondary" onClick={() => closeModal(deleteModalId)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Confirmar Eliminación
+            </Button>
+          </div>
+        </StackContainer>
+      </Modal>
     </Main>
   )
 }

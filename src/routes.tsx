@@ -101,7 +101,7 @@ export const protectedRoutes: appRoute[] = [
   { 
     path: rawRoutes.employee.holidays,
     element: <Vacaciones />,
-    allowedFor: ["employee"],
+    allowedFor: ["employee","rrhh"],
     label: "Vacaciones",
     icon: "calendar-check",
     type: "module"
@@ -136,6 +136,13 @@ export const protectedRoutes: appRoute[] = [
     allowedFor: ["rrhh"],
     label: "Nuevo aviso",
     icon: "plus-circle-fill",
+  },
+  { 
+    path: `${rawRoutes.rrhh.notices}/edit/:id`,
+    element: <Nuevo_Aviso />,
+    allowedFor: ["rrhh"],
+    label: "Editar aviso",
+    icon: "pencil-fill",
   },
   { 
     path: rawRoutes.common.incidents,

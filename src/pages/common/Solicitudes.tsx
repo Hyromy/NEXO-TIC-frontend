@@ -23,7 +23,7 @@ import { getAccessToken } from "../../utils/getters";
 import { decodeJWT } from "../../utils/jwt";
 
 import { Alert, launchAlert } from "../../components/Alert"
-
+import Calendar from "react-calendar";
 const defaultHorizontalPadding = 5;
 const defaultGap = 4;
 const defaultMinStep = 0;
@@ -66,8 +66,10 @@ export default function Solicitudes() {
       if (!userId) return;
       try {
         const empRes = await fetchData(employeeService.getAll());
-        const employee = Array.isArray(empRes) 
-          ? empRes.find((e: any) => Number(e.user?.id || e.user) === Number(userId)) 
+        const employee = Array.isArray(empRes)
+          ? empRes.find(
+              (e: any) => Number(e.user?.id || e.user) === Number(userId),
+            )
           : null;
 
         if (employee) {
@@ -76,8 +78,9 @@ export default function Solicitudes() {
           const periods = Array.isArray(periodRes) ? periodRes : [];
 
           if (periods.length > 0) {
-            const currentPeriod = periods.find((p: any) => 
-              Number(p.employee?.id || p.employee) === Number(employee.id)
+            const currentPeriod = periods.find(
+              (p: any) =>
+                Number(p.employee?.id || p.employee) === Number(employee.id),
             );
             setAvailableDays(currentPeriod?.days_remaining || 0);
           }
@@ -120,33 +123,39 @@ export default function Solicitudes() {
         }),
       );
 
-      console.log("Respuesta de Solicitud Creada:", request); //
-
-      if (!request || request.error) {
+      if (!requestRes || requestRes.error) {
         return launchAlert("main-float-container",
           <Alert type="danger" icon="error">
-            Error al crear la solicitud: {request?.message || "Servidor no responde"}
+            Error al crear la solicitud: {requestRes?.message || "Servidor no responde"}
           </Alert>,
         )
       }
 
-      const requestId = request.id;
       for (const day of data.schedule) {
         // Formatear a YYYY-MM-DD
         const dateObj = new Date(day);
         const formattedDate = dateObj.toISOString().split("T")[0];
 
-          await createDetail(
-            vacationDetailService.create({
-              selected_day: formattedDate,
-              vacation_request_id: requestRes.id,
-            }),
-          );
-        }
-        alert("¡Solicitud enviada con éxito!");
-        navigate("/holidays");
+        await createDetail(
+          vacationDetailService.create({
+            selected_day: formattedDate,
+            vacation_request_id: requestRes.id,
+          }),
+        );
       }
-    } catch (e) { console.error(e); }
+
+      launchAlert("main-float-container",
+        <Alert type="success" icon="success">
+          Solicitud enviada correctamente.
+        </Alert>,
+      )
+      setData(defaultState.data)
+      setCanContinue(defaultState.canContinue)
+      setStep(defaultMinStep)
+      navigate("/holidays");
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const renderStep = () => {
@@ -216,15 +225,8 @@ export default function Solicitudes() {
                 h_padding={defaultHorizontalPadding}
                 onClick={() => {
                   if (isEnd) {
-                    launchAlert("main-float-container",
-                      <Alert type="success" icon="success">
-                        Solicitud enviada correctamente.
-                      </Alert>,
-                    )
-                    setData(defaultState.data)
-                    setCanContinue(defaultState.canContinue)
-                    setStep(defaultMinStep)
-                    return  
+                    void handleSend()
+                    return
                   }
                   changeStep(true)
                 }}
@@ -266,7 +268,11 @@ function RequestType({ typeRequest, onReady }: RequestTypeProps) {
     <Option key="4" text="Dia económico" value="economicDay" />,
     <Option key="5" text="Salida anticipada" value="earlyExit" />,
     <Option key="6" text="Incapacidad medica" value="medicalIncapacity" />,
-    <Option key="7" text="Permiso por maternidad / paternidad" value="parentalLeave" />,
+    <Option
+      key="7"
+      text="Permiso por maternidad / paternidad"
+      value="parentalLeave"
+    />,
   ];
   const handleTypeChange = (value: string) => {
     setLocalType(value);
@@ -292,6 +298,7 @@ type ScheduleProps = StepViewProps & {
 };
 function Schedule({ schedule, onReady, availableDays = 0 }: ScheduleProps) {
   const [localSchedule, setLocalSchedule] = useState(schedule);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   useEffect(() => {
     if (localSchedule.length > 0) onReady({ schedule: localSchedule });
   }, []);
@@ -325,18 +332,44 @@ function Schedule({ schedule, onReady, availableDays = 0 }: ScheduleProps) {
         </ColContainer>
         <ColContainer defaultSize={12} xl={4}>
           <Card>
-            {"{{ Calendar here }}"}
+            <Calendar
+              onChange={(value) => {
+                if (value instanceof Date) {
+                  setSelectedDate(value);
+                }
+              }}
+              value={selectedDate}
+              minDate={new Date()}
+              tileDisabled={({ date }) => {
+                const day = date.getDay();
+                return day === 0 || day === 6;
+              }}
+              tileClassName={({ date }) => {
+                const formatted = date.toISOString().split("T")[0];
+                return localSchedule.includes(formatted) ? "selected-day" : "";
+              }}
+            />
             <Button
-              onClick={() => addDay(new Date().toDateString())}
+              onClick={() => {
+                if (!selectedDate) return;
+                const formatted = selectedDate.toISOString().split("T")[0];
+                if (!localSchedule.includes(formatted)) {
+                  addDay(formatted);
+                }
+              }}
               isLoading={!canAddMore}
             >
-              add()
+              Agregar día
             </Button>
             <Button
-              onClick={() => removeDay(new Date().toDateString())}
+              onClick={() => {
+                if (!selectedDate) return;
+                const formatted = selectedDate.toISOString().split("T")[0];
+                removeDay(formatted);
+              }}
               isLoading={!canRemove}
             >
-              clear()
+            Eliminar día
             </Button>
             {localSchedule.map((day, index) => (
               <div key={index}>{day}</div>

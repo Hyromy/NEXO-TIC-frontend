@@ -43,8 +43,8 @@ export default function useUser() {
       if (decoded) {
         let userType = "employee"
 
-        if (decoded.is_staff) userType = "admin"
-        else if (decoded.is_superuser) userType = "rrhh"
+        if (decoded.is_staff) userType = "rrhh"
+        else if (decoded.is_superuser) userType = "admin"
 
         setUserType(userType as UserType)
       }
@@ -52,7 +52,7 @@ export default function useUser() {
     setLoading(false)
   }, [])
 
-  const canAccessEmployee = () => userType == "employee" || userType == "admin"
+  const canAccessEmployee = () => userType == "employee" || userType == "rrhh"
   const canAccessRRHH = () => userType == "rrhh" || userType == "admin"
   const canAccessAdmin = () => userType == "admin"
 
